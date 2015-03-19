@@ -17,7 +17,7 @@ fi
 
 # Configure OpenNMS
 mkdir -p ${OPENNMS_HOME}
-tar xvf /opt/provisioning/opennms.tar.gz -C ${OPENNMS_HOME}
+tar xvf /opt/provisioning/opennms*.tar.gz -C ${OPENNMS_HOME}
 
 # Copy the smnnepo server components to opennms
 cp /opt/provisioning/smnnepo.war ${OPENNMS_HOME}/jetty-webapps

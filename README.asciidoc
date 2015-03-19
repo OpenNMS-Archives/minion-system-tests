@@ -1,4 +1,4 @@
-= minion-system-tests
+= Minion System Tests
 :ascii-ids:
 :encoding: UTF-8
 :icons: font
@@ -32,9 +32,6 @@ Copy the generated opennms-<version>.tar.gz file to opennms, e.g.
 ----
 cp ~/dev/opennms/target/opennms-<version>.tar.gz ~/dev/minion-system-tests/docker/provisioning/dominion/opennms.tar.gz
 ----
-
-[NOTE]
-The target file name must be +opennms.tar.gz+
 
 You also have to compile/build the +OpenNMS SMNnepO+ project.
 

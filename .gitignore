@@ -14,5 +14,5 @@ buildNumber.properties
 .project
 
 # Artifacts
-opennms.tar.gz
+opennms*.tar.gz
 smnnepo.war

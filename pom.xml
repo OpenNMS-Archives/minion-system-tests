@@ -38,11 +38,6 @@
         <version>0.1.51</version>
     </dependency>
     <dependency>
-        <groupId>org.apache.karaf.features</groupId>
-        <artifactId>org.apache.karaf.features.management</artifactId>
-        <version>${karafVersion}</version>
-    </dependency>
-    <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-simple</artifactId>
         <version>1.7.10</version>
@@ -68,11 +63,19 @@
         <version>1.6.3</version>
     </dependency>
 
-    <!-- OpenNMS model classes -->
+    <!-- Karaf management MBeans -->
+    <dependency>
+        <groupId>org.apache.karaf.features</groupId>
+        <artifactId>org.apache.karaf.features.management</artifactId>
+        <version>${karafVersion}</version>
+    </dependency>
+
+    <!-- Used to access the model classes used by OpenNMS' ReST API -->
     <dependency>
         <groupId>org.opennms.features</groupId>
         <artifactId>org.opennms.features.rest-measurements-api</artifactId>
         <version>${opennmsVersion}</version>
+        <!-- Exclude all transitive dependencies -->
         <exclusions>
             <exclusion>
                 <groupId>*</groupId>
@@ -84,6 +87,7 @@
         <groupId>org.opennms</groupId>
         <artifactId>opennms-provision-persistence</artifactId>
         <version>${opennmsVersion}</version>
+        <!-- Exclude all transitive dependencies -->
         <exclusions>
             <exclusion>
                 <groupId>*</groupId>
@@ -92,13 +96,13 @@
         </exclusions>
     </dependency>
     <dependency>
-        <groupId>org.opennms.core</groupId>
-        <artifactId>org.opennms.core.lib</artifactId>
+        <groupId>org.opennms</groupId>
+        <artifactId>opennms-model</artifactId>
         <version>${opennmsVersion}</version>
     </dependency>
     <dependency>
-        <groupId>org.opennms</groupId>
-        <artifactId>opennms-model</artifactId>
+        <groupId>org.opennms.core</groupId>
+        <artifactId>org.opennms.core.lib</artifactId>
         <version>${opennmsVersion}</version>
     </dependency>
   </dependencies>

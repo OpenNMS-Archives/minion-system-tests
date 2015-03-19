@@ -3,6 +3,8 @@
   <groupId>org.opennms.minion</groupId>
   <artifactId>minion-system-tests</artifactId>
   <version>1.0.0-SNAPSHOT</version>
+  <name>Minion System Tests</name>
+  <description>Programmatic tests for Minion features.</description>
 
   <properties>
     <opennmsVersion>16.0.0-PJSM-SNAPSHOT</opennmsVersion>
@@ -100,6 +102,4 @@
         <version>${opennmsVersion}</version>
     </dependency>
   </dependencies>
-  <name>Minion System Tests</name>
-  <description>Programmatic tests for Minion features.</description>
 </project>

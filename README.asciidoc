@@ -1,0 +1,75 @@
+= minion-system-tests
+:ascii-ids:
+:encoding: UTF-8
+:icons: font
+:numbered:
+
+End-to-end tests for Minion/Dominion that leverage Docker for managing services.
+
+== Setup
+
+=== Docker
+
+Make sure that the Docker daemon is started with the '--iptables=true --icc=false' options,
+which will make sure the containers are properly isolated.
+
+=== OpenNMS
+
+In order to get the OpenNMS instance to work it is required that you know how to build OpenNMS from source.
+If you do not know how to do this, go link:http://www.opennms.org/wiki/Developing_with_Git[here]
+
+[NOTE]
+You have to checkout branch +pjsm/2.0+.
+
+Run this to do a clean build and assembly of OpenNMS
+
+----
+./clean.pl && ./compile.pl && ./assemble.pl -Dopennms.home=/opt/opennms
+----
+
+Copy the generated opennms-<version>.tar.gz file to opennms, e.g.
+
+----
+cp ~/dev/opennms/target/opennms-<version>.tar.gz ~/dev/minion-system-tests/docker/provisioning/dominion/opennms.tar.gz
+----
+
+[NOTE]
+The target file name must be +opennms.tar.gz+
+
+You also have to compile/build the +OpenNMS SMNnepO+ project.
+
+[NOTE]
+You have to checkout branch +develop+
+
+Simply invoke
+
+----
+mvn clean install -DskipTests -Dopennms.home=/opt/opennms
+----
+
+And after that copy the generated smnnepo.war file to opennms, e.g.
+
+----
+cp ~/dev/smnnepo/sampler-repo-webapp/target/smnnepo.war ~/dev/minion-system-tests/docker/provisioning/dominion/smnnepo.war
+----
+
+== Usage
+NOTE: All commands must be executed from the project folder.
+
+=== Building
+
+Build the Docker images with:
+
+----
+cd docker
+./build-docker-images.sh
+----
+
+=== Testing
+
+Once the Docker images are build, invoke the tests with:
+
+----
+mvn test
+----
+

@@ -1,0 +1,10 @@
+<monitoring-locations-configuration xmlns="http://xmlns.opennms.org/xsd/config/monitoring-locations">
+   <locations>
+      <location-def location-name="minion1" monitoring-area="minion1" polling-package-name="minion" collection-package-name="minion" geolocation="The OpenNMS Group, Pittsboro, NC" coordinates="35.7174,-79.1619" priority="50">
+         <tags>
+            <tag name="minion"/>
+            <tag name="testing"/>
+         </tags>
+      </location-def>
+   </locations>
+</monitoring-locations-configuration>

@@ -3,10 +3,13 @@ package org.opennms.minion.stests;
 import static com.jayway.awaitility.Awaitility.await;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
+import java.io.File;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -60,6 +63,7 @@ public class NewMinionSystem extends ExternalResource implements MinionSystemTes
     // (whether or not these were successful)
     private final boolean skipTearDown;
 
+    private File dockerProvisioningDir;
     private DockerClient docker;
     // Used to keep track of the ids for all the created containers
     private final Set<String> createdContainerIds = Sets.newHashSet();
@@ -75,6 +79,10 @@ public class NewMinionSystem extends ExternalResource implements MinionSystemTes
 
     @Override
     protected void before() throws Throwable {
+        dockerProvisioningDir = Paths.get(System.getProperty("user.dir"), "docker", "provisioning").toFile();
+        // Fail early
+        assertThat(dockerProvisioningDir.exists(), is(true));
+
         docker = DefaultDockerClient.fromEnv().build();
 
         spawnPostgres();
@@ -165,7 +173,8 @@ public class NewMinionSystem extends ExternalResource implements MinionSystemTes
         final HostConfig dominionHostConfig = HostConfig.builder()
                 .privileged(true)
                 .publishAllPorts(true)
-                .binds("/home/jesse/labs/docker/provisioning/dominion:/opt/provisioning")
+                .binds(String.format("%s:/opt/provisioning",
+                        new File(dockerProvisioningDir, "dominion").getAbsolutePath()))
                 .links(String.format("%s:postgres", containerInfo.get(POSTGRES).name()))
                 .build();
 
@@ -258,10 +267,12 @@ public class NewMinionSystem extends ExternalResource implements MinionSystemTes
 
         LOG.info("Waiting for REST service @ {}.", httpAddr);
         await().atMost(5, MINUTES).pollInterval(15, SECONDS).until(getDisplayVersion, is(notNullValue()));
+        LOG.info("Dominion's REST service is online.");
 
         final InetSocketAddress sshAddr = getServiceAddress(DOMINION, 8101);
         LOG.info("Waiting for SSH service @ {}.", sshAddr);
         await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SSHClient.canConnectViaSsh(sshAddr, "admin", "admin"));
+        LOG.info("Dominion's Karaf Shell is online.");
 
         try (
             final SSHClient sshClient = new SSHClient(sshAddr, "admin", "admin");

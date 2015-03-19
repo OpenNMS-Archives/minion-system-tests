@@ -12,3 +12,7 @@ buildNumber.properties
 .classpath
 .settings
 .project
+
+# Artifacts
+opennms.tar.gz
+smnnepo.war

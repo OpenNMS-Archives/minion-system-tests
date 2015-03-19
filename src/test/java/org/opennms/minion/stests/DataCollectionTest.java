@@ -44,8 +44,7 @@ public class DataCollectionTest {
     private static final Logger LOG = LoggerFactory.getLogger(DataCollectionTest.class);
 
     @ClassRule
-    //public static MinionSystemTestRule minionLabTestRule = new ExistingMinionSystem();
-    public static MinionSystemTestRule minionLabTestRule = new NewMinionSystem(true);
+    public static MinionSystemTestRule minionLabTestRule = new NewMinionSystem();
 
     private RESTClient restClient;
 

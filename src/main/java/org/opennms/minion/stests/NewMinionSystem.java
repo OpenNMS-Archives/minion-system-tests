@@ -103,12 +103,15 @@ public class NewMinionSystem extends ExternalResource implements MinionSystemTes
             // Kill and remove all of the containers we created
             for (String containerId : createdContainerIds) {
                 try {
+                    LOG.info("Killing and removing container with id: {}", containerId);
                     docker.killContainer(containerId);
                     docker.removeContainer(containerId);
                 } catch (Exception e) {
-                    e.printStackTrace();
+                    LOG.error("Failed to kill and/or remove container with id: {}", containerId, e);
                 }
             }
+        } else {
+            LOG.info("Skipping tear down.");
         }
 
         docker.close();

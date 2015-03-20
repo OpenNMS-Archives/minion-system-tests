@@ -18,6 +18,10 @@ import org.slf4j.LoggerFactory;
 /**
  * An easy way of grabbing proxies to Karaf's MBeans. 
  *
+ * These should be used instead of the shell when possible, since they
+ * expose errors as exception - which are difficult to catch when working
+ * over a remote shell.
+ *
  * @author jwhite
  */
 public class KarafMBeanProxyHelper {

@@ -8,7 +8,7 @@ RUN \
 
 COPY container-files /
 
-ENV LOCATION=docker
+ENV LOCATION docker
 
 EXPOSE 161/udp
 

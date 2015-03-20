@@ -6,67 +6,91 @@
 
 End-to-end tests for Minion/Dominion that leverage Docker for managing services.
 
+== Preface
+
+These tests we're built to automate the validation of application-layer functionality in Minion/Dominion, also referred to herein as the Minion System.
+
+The framework provides the ability to instantiate a Minion System on the local, or a remote host using a collection of linked Docker containers. Once instantiated, references to the various hosts and ports for all of the services (i.e. Dominion HTTP, Minion Karaf Shell) are available, and control is passed to the test suite.
+
+== Tests
+
+=== Data Collection
+
+The current data collection tests verify that:
+
+1. The Minion automatically retrieves the list of provisioned nodes from Dominion
+1. The Minion is capable of collecting samples from the SNMP agents on the provisioned nodes
+1. Samples get persisted to RRD files on the Dominion instance
+
 == Setup
 
-=== Docker
+=== Requirements
 
-Make sure that the Docker daemon is started with the '--iptables=true --icc=false' options,
-which will make sure the containers are properly isolated.
+* Docker (tested with v1.4.1)
+* Maven 3
+* Java 7
 
-=== OpenNMS
+=== Setup the Docker daemon
 
-In order to get the OpenNMS instance to work it is required that you know how to build OpenNMS from source.
-If you do not know how to do this, go link:http://www.opennms.org/wiki/Developing_with_Git[here]
+We use the link:https://github.com/spotify/docker-client[Spotify Docker Client] to communicate with the Docker daemon.
+
+The location of the Docker daemon can be controlled with the +DOCKER_HOST+ environment variable. If the Docker daemon is running on the local host, no extra configuration should be required.
 
 [NOTE]
-You have to checkout branch +pjsm/2.0+.
+In order to make sure that containers and properly isolated you should start the daemon with the '--iptables=true --icc=false' options.
 
-Run this to do a clean build and assembly of OpenNMS
+=== Compile Dominion from source
+
+The Docker image for Dominion requires an archive of OpenNMS' full assembly.
+
+After obtaining the link:http://www.opennms.org/wiki/Developing_with_Git[sources], run the following to do a clean build and assembly.
+
+[NOTE]
+You need to checkout the +pjsm/2.0+ branch.
 
 ----
 ./clean.pl && ./compile.pl && ./assemble.pl -Dopennms.home=/opt/opennms
 ----
 
-Copy the generated opennms-<version>.tar.gz file to opennms, e.g.
+Copy the generated opennms-<version>.tar.gz file to our working directory, e.g.
 
 ----
 cp ~/dev/opennms/target/opennms-<version>.tar.gz ~/dev/minion-system-tests/docker/provisioning/dominion/opennms.tar.gz
 ----
 
-You also have to compile/build the +OpenNMS SMNnepO+ project.
+=== Compile Minion from source
+
+The Docker image for Dominion also requires the .war file from the link:https://github.com/OpenNMS/smnnepo[SMNnepO project].
 
 [NOTE]
-You have to checkout branch +develop+
+You need to checkout the +develop+ branch.
 
-Simply invoke
+Generate the .war with the following:
 
 ----
 mvn clean install -DskipTests -Dopennms.home=/opt/opennms
 ----
 
-And after that copy the generated smnnepo.war file to opennms, e.g.
+Copy the generated smnnepo.war file to our working directory, e.g.
 
 ----
 cp ~/dev/smnnepo/sampler-repo-webapp/target/smnnepo.war ~/dev/minion-system-tests/docker/provisioning/dominion/smnnepo.war
 ----
 
-== Usage
-NOTE: All commands must be executed from the project folder.
-
-=== Building
+=== Build the Docker images
 
 Build the Docker images with:
 
 ----
-cd docker
+pushd docker
 ./build-docker-images.sh
+popd
 ----
 
-=== Testing
+=== Run the tests
 
-Once the Docker images are build, invoke the tests with:
+Once the Docker images are built, you can invoke the test suite with:
 
 ----
 mvn test
 ----
-

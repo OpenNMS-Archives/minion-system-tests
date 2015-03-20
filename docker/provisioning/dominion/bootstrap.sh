@@ -4,8 +4,8 @@ OPENNMS_HOME=/opt/opennms
 echo "OPENNMS HOME: "${OPENNMS_HOME}
 
 # We need an opennms.tar.gz file
-if [ ! -f /opt/provisioning/opennms.tar.gz ]; then
-    echo "There is no opennms.tar.gz file located in /opt/provisioning."
+if [ ! -f /opt/provisioning/opennms*.tar.gz ]; then
+    echo "There is no opennms*.tar.gz file located in /opt/provisioning."
     exit 1
 fi
 

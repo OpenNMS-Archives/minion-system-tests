@@ -106,14 +106,15 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
             return;
         }
 
-        if (didFail) {
-            for (String containerId : createdContainerIds) {
-                try {
-                    LogStream logStream = docker.logs(containerId, LogsParameter.STDOUT, LogsParameter.STDERR);
-                    LOG.error("Logs for {}: {}", containerId, logStream.readFully());
-                } catch (DockerException | InterruptedException e) {
-                    LOG.warn("Failed to get logs for container {}.", e);
-                }
+        // Ideally, we would only gather the logs when the tests fail, but individual
+        // test failure can't be detected when using @ClassRules
+        LOG.info("Gathering container logs...");
+        for (String containerId : createdContainerIds) {
+            try {
+                LogStream logStream = docker.logs(containerId, LogsParameter.STDOUT, LogsParameter.STDERR);
+                LOG.info("Logs for {}: {}", containerId, logStream.readFully());
+            } catch (DockerException | InterruptedException e) {
+                LOG.warn("Failed to get logs for container {}.", e);
             }
         }
 

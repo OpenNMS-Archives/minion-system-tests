@@ -1,6 +1,5 @@
 package org.opennms.minion.stests.junit;
 
-import org.junit.rules.ExternalResource;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
@@ -18,18 +17,16 @@ public abstract class ExternalResourceRule implements TestRule {
         return statement(base);
     }
 
-    ExternalResource a;
-    
     private Statement statement(final Statement base) {
         return new Statement() {
             @Override
             public void evaluate() throws Throwable {
-                boolean didFail = false;
+                boolean didFail = true;
                 try {
                     before();
                     base.evaluate();
+                    didFail = false;
                 } catch (Throwable t) {
-                    didFail = true;
                     throw t;
                 } finally {
                     after(didFail);

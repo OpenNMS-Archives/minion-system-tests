@@ -15,6 +15,8 @@ if [ ! -f /opt/provisioning/smnnepo.war ]; then
     exit 1
 fi
 
+exit 1
+
 # Configure OpenNMS
 mkdir -p ${OPENNMS_HOME}
 tar xvf /opt/provisioning/opennms*.tar.gz -C ${OPENNMS_HOME}

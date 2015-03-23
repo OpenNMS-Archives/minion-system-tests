@@ -18,7 +18,7 @@ import java.util.concurrent.Callable;
 import jersey.repackaged.com.google.common.collect.Lists;
 
 import org.apache.karaf.features.management.FeaturesServiceMBean;
-import org.junit.rules.ExternalResource;
+import org.opennms.minion.stests.junit.ExternalResourceRule;
 import org.opennms.minion.stests.utils.KarafMBeanProxyHelper;
 import org.opennms.minion.stests.utils.RESTClient;
 import org.opennms.minion.stests.utils.SSHClient;
@@ -29,7 +29,9 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
+import com.spotify.docker.client.DockerClient.LogsParameter;
 import com.spotify.docker.client.DockerException;
+import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.ContainerInfo;
@@ -48,7 +50,7 @@ import com.spotify.docker.client.messages.PortBinding;
  *
  * @author jwhite
  */
-public class NewMinionSystem extends ExternalResource implements MinionSystemTestRule {
+public class NewMinionSystem extends ExternalResourceRule implements MinionSystemTestRule {
 
     private static final Logger LOG = LoggerFactory.getLogger(NewMinionSystem.class);
 
@@ -94,9 +96,21 @@ public class NewMinionSystem extends ExternalResource implements MinionSystemTes
     };
 
     @Override
-    protected void after() {
+    protected void after(boolean didFail) {
         if (docker == null) {
+            LOG.warn("Docker instance is null. Skipping tear down.");
             return;
+        }
+
+        if (didFail) {
+            for (String containerId : createdContainerIds) {
+                try {
+                    LogStream logStream = docker.logs(containerId, LogsParameter.STDOUT, LogsParameter.STDERR);
+                    LOG.error("Logs for {}: {}", containerId, logStream.readFully());
+                } catch (DockerException | InterruptedException e) {
+                    LOG.warn("Failed to get logs for container {}.", e);
+                }
+            }
         }
 
         if (!skipTearDown) {

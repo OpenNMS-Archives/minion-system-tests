@@ -19,6 +19,7 @@ import jersey.repackaged.com.google.common.collect.Lists;
 
 import org.apache.karaf.features.management.FeaturesServiceMBean;
 import org.opennms.minion.stests.junit.ExternalResourceRule;
+import org.opennms.minion.stests.utils.DBUtils;
 import org.opennms.minion.stests.utils.KarafMBeanProxyHelper;
 import org.opennms.minion.stests.utils.RESTClient;
 import org.opennms.minion.stests.utils.SSHClient;
@@ -88,6 +89,9 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         docker = DefaultDockerClient.fromEnv().build();
 
         spawnPostgres();
+        // Wait for PostgreSQL to make sure that it's available when Dominion starts
+        // Otherwise, the install script may fail
+        waitForPostgres();
         spawnDominion();
         spawnSnmpd();
         spawnMinion();
@@ -165,7 +169,11 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         final String postgresContainerId = postgresCreation.id();
         createdContainerIds.add(postgresContainerId);
 
-        docker.startContainer(postgresContainerId);
+        final HostConfig postgresHostBuilder = HostConfig.builder()
+                .publishAllPorts(true)
+                .build();
+
+        docker.startContainer(postgresContainerId, postgresHostBuilder);
 
         final ContainerInfo postgresInfo = docker.inspectContainer(postgresContainerId);
         if (!postgresInfo.state().running()) {
@@ -259,6 +267,16 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         }
 
         containerInfo.put(MINION, minionInfo);
+    }
+
+    /**
+     * Blocks until the PostgreSQL server is up and running.
+     */
+    private void waitForPostgres() {
+        final InetSocketAddress postgresAddr = getServiceAddress(POSTGRES, 5432);
+        LOG.info("Waiting for PostgreSQL service @ {}.", postgresAddr);
+        await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(DBUtils.canConnectToPostgres(postgresAddr, "postgres", "postgres", "postgres"));
+        LOG.info("PostgreSQL service is online.");
     }
 
     /**

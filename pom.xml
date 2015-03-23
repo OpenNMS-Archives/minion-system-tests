@@ -62,6 +62,11 @@
         <artifactId>awaitility</artifactId>
         <version>1.6.3</version>
     </dependency>
+    <dependency>
+        <groupId>org.postgresql</groupId>
+        <artifactId>postgresql</artifactId>
+        <version>9.4-1201-jdbc41</version>
+    </dependency>
 
     <!-- Karaf management MBeans -->
     <dependency>

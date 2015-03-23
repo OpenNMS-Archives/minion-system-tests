@@ -26,6 +26,8 @@ import org.opennms.minion.stests.utils.SSHClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.opennms.minion.stests.utils.KarafMBeanHelper.isFeatureInstalled;
+
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.spotify.docker.client.DefaultDockerClient;
@@ -250,7 +252,6 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         final ContainerCreation minionCreation = docker.createContainer(minionConfig);
         final String minionContainerId = minionCreation.id();
         createdContainerIds.add(minionContainerId);
-        
         final List<String> links = Lists.newArrayList();
         links.add(String.format("%s:dominion", containerInfo.get(DOMINION).name()));
         links.add(String.format("%s:snmpd", containerInfo.get(SNMPD).name()));
@@ -329,7 +330,17 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         final InetSocketAddress rmiAddr = getServiceAddress(DOMINION, 1099);
         KarafMBeanProxyHelper mbeanHelper = new KarafMBeanProxyHelper(jmxAddr, rmiAddr, "admin", "admin");
         FeaturesServiceMBean featuresService = mbeanHelper.getFeaturesService("opennms");
+
+        // These features should be installed by the setup script
+        assertThat(isFeatureInstalled(featuresService, "opennms-activemq"), is(true));
+        assertThat(isFeatureInstalled(featuresService, "sample-receiver-activemq"), is(true));
+        assertThat(isFeatureInstalled(featuresService, "minion-base"), is(true));
+        assertThat(isFeatureInstalled(featuresService, "dominion-controller-statuswriter-dao"), is(true));
+        assertThat(isFeatureInstalled(featuresService, "dominion-controller"), is(true));
+
+        // Used to persist samples to RRDs
         featuresService.installFeature("sample-storage-rrd");
+        assertThat(isFeatureInstalled(featuresService, "sample-storage-rrd"), is(true));
     }
 
     /**

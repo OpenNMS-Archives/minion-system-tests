@@ -7,8 +7,12 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.*;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
@@ -108,15 +112,30 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
             return;
         }
 
-        // Ideally, we would only gather the logs when the tests fail, but individual
-        // test failure can't be detected when using @ClassRules
-        LOG.info("Gathering container logs...");
+        // Ideally, we would only gather the logs and container output
+        // when we fail, but we can't detect this when using @ClassRules
+        final ContainerInfo dominionContainerInfo = containerInfo.get(DOMINION);
+        if (dominionContainerInfo != null) {
+            LOG.info("Gathering Dominion logs...");
+            final Path destination = Paths.get("target/dominion.logs.tar");
+            try (
+                    final InputStream in = docker.copyContainer(dominionContainerInfo.id(), "/opt/opennms/logs");
+            ) {
+                Files.copy(in, destination);
+            } catch (DockerException|InterruptedException|IOException e) {
+                LOG.warn("Failed to copy the logs directory from the Dominion container {}.", e);
+            }
+        } else {
+            LOG.warn("No Dominion container provisioned. Logs won't be copied.");
+        }
+
+        LOG.info("Gathering container output...");
         for (String containerId : createdContainerIds) {
             try {
                 LogStream logStream = docker.logs(containerId, LogsParameter.STDOUT, LogsParameter.STDERR);
-                LOG.info("Logs for {}: {}", containerId, logStream.readFully());
+                LOG.info("Stdout/stderr for {}: {}", containerId, logStream.readFully());
             } catch (DockerException | InterruptedException e) {
-                LOG.warn("Failed to get logs for container {}.", e);
+                LOG.warn("Failed to get stdout/stderr for container {}.", e);
             }
         }
 

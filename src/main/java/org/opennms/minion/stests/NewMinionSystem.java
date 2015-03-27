@@ -179,6 +179,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         docker.startContainer(postgresContainerId, postgresHostBuilder);
 
         final ContainerInfo postgresInfo = docker.inspectContainer(postgresContainerId);
+        LOG.info("Postgres container info: {}", postgresInfo);
         if (!postgresInfo.state().running()) {
             throw new IllegalStateException("Could not start Postgres container");
         }
@@ -209,6 +210,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         docker.startContainer(dominionContainerId, dominionHostConfig);
 
         final ContainerInfo dominionInfo = docker.inspectContainer(dominionContainerId);
+        LOG.info("Dominion container info: {}", dominionInfo);
         if (!dominionInfo.state().running()) {
             throw new IllegalStateException("Could not start Dominion container");
         }
@@ -234,6 +236,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         docker.startContainer(snmpdContainerId, snmpdHostConfig);
 
         final ContainerInfo snmpdInfo = docker.inspectContainer(snmpdContainerId);
+        LOG.info("Snmpd container info: {}", snmpdInfo);
         if (!snmpdInfo.state().running()) {
             throw new IllegalStateException("Could not start Minion container");
         }
@@ -264,6 +267,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         docker.startContainer(minionContainerId, minionHostConfig);
 
         final ContainerInfo minionInfo = docker.inspectContainer(minionContainerId);
+        LOG.info("Minion container info: {}", minionInfo);
         if (!minionInfo.state().running()) {
             throw new IllegalStateException("Could not start Minion container");
         }

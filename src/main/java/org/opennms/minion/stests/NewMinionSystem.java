@@ -123,7 +123,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
             ) {
                 Files.copy(in, destination);
             } catch (DockerException|InterruptedException|IOException e) {
-                LOG.warn("Failed to copy the logs directory from the Dominion container {}.", e);
+                LOG.warn("Failed to copy the logs directory from the Dominion container.", e);
             }
         } else {
             LOG.warn("No Dominion container provisioned. Logs won't be copied.");

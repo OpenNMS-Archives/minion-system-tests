@@ -1,6 +1,5 @@
-FROM java:openjdk-7
+FROM dockerfile/java:oracle-java8
 MAINTAINER jesse@opennms.com
-ENV JAVA_HOME /usr/lib/jvm/java-7-openjdk-amd64
 
 RUN wget http://apache.cs.utah.edu/karaf/2.4.0/apache-karaf-2.4.0.tar.gz; \
     mkdir /opt/karaf; \

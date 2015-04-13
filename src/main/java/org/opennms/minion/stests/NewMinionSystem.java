@@ -14,6 +14,7 @@ import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -121,7 +122,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
             try (
                     final InputStream in = docker.copyContainer(dominionContainerInfo.id(), "/opt/opennms/logs");
             ) {
-                Files.copy(in, destination);
+                Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
             } catch (DockerException|InterruptedException|IOException e) {
                 LOG.warn("Failed to copy the logs directory from the Dominion container.", e);
             }

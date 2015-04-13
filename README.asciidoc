@@ -28,7 +28,7 @@ The current data collection tests verify that:
 
 * Docker (tested with v1.4.1)
 * Maven 3
-* Java 7
+* Java 8
 
 === Setup the Docker daemon
 

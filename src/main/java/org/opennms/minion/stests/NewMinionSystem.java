@@ -73,7 +73,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
     // (whether or not these were successful)
     private final boolean skipTearDown;
 
-    private File dockerProvisioningDir;
+    private File dockerRootDir;
     private DockerClient docker;
     // Used to keep track of the ids for all the created containers
     private final Set<String> createdContainerIds = Sets.newHashSet();
@@ -89,9 +89,9 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
 
     @Override
     protected void before() throws Throwable {
-        dockerProvisioningDir = Paths.get(System.getProperty("user.dir"), "docker", "provisioning").toFile();
+        dockerRootDir = Paths.get(System.getProperty("user.dir"), "docker").toFile();
         // Fail early
-        assertThat(dockerProvisioningDir.exists(), is(true));
+        assertThat(dockerRootDir.exists(), is(true));
 
         docker = DefaultDockerClient.fromEnv().build();
 
@@ -223,7 +223,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
                 .privileged(true)
                 .publishAllPorts(true)
                 .binds(String.format("%s:/opt/provisioning",
-                        new File(dockerProvisioningDir, "dominion").getAbsolutePath()))
+                        new File(dockerRootDir, "dominion" + File.separator + "provisionin").getAbsolutePath()))
                 .links(String.format("%s:postgres", containerInfo.get(POSTGRES).name()))
                 .build();
 

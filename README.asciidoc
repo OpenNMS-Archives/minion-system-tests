@@ -55,7 +55,7 @@ You need to checkout the +pjsm/2.0+ branch.
 Copy the generated opennms-<version>.tar.gz file to our working directory, e.g.
 
 ----
-cp ~/dev/opennms/target/opennms-<version>.tar.gz ~/dev/minion-system-tests/docker/provisioning/dominion/opennms.tar.gz
+cp ~/dev/opennms/target/opennms-<version>.tar.gz ~/dev/minion-system-tests/docker/dominion/provisioning/opennms.tar.gz
 ----
 
 === Compile Minion from source
@@ -74,7 +74,7 @@ mvn clean install -DskipTests -Dopennms.home=/opt/opennms
 Copy the generated smnnepo.war file to our working directory, e.g.
 
 ----
-cp ~/dev/smnnepo/sampler-repo-webapp/target/smnnepo.war ~/dev/minion-system-tests/docker/provisioning/dominion/smnnepo.war
+cp ~/dev/smnnepo/sampler-repo-webapp/target/smnnepo.war ~/dev/minion-system-tests/docker/dominion/provisioning/smnnepo.war
 ----
 
 === Build the Docker images

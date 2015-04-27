@@ -15,3 +15,6 @@ docker build -t dominion:v1 ./dominion || exit 1
 
 echo "Building snmpd image"
 docker build -t snmpd:v1 ./snmpd || exit 1
+
+echo "Building Tomcat image"
+docker build -t tomcat:v1 ./tomcat || exit 1

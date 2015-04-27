@@ -68,6 +68,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
     public static final String DOMINION = "dominion";
     public static final String MINION = "minion";
     public static final String SNMPD = "snmpd";
+    public static final String TOMCAT = "tomcat";
 
     // Set if the containers should be kept running after the tests complete
     // (whether or not these were successful)
@@ -101,6 +102,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         waitForPostgres();
         spawnDominion();
         spawnSnmpd();
+        spawnTomcat();
         spawnMinion();
         configureDominion();
         configureMinion();
@@ -258,10 +260,36 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         final ContainerInfo snmpdInfo = docker.inspectContainer(snmpdContainerId);
         LOG.info("Snmpd container info: {}", snmpdInfo);
         if (!snmpdInfo.state().running()) {
-            throw new IllegalStateException("Could not start Minion container");
+            throw new IllegalStateException("Could not start snmpd container");
         }
 
         containerInfo.put(SNMPD, snmpdInfo);
+    }
+
+    /**
+     * Spawns the Tomcat container.
+     */
+    private void spawnTomcat() throws DockerException, InterruptedException {
+        final ContainerConfig tomcatConfig = ContainerConfig.builder()
+                .image("tomcat:v1")
+                .build();
+
+        final ContainerCreation tomcatCreation = docker.createContainer(tomcatConfig);
+        final String tomcatContainerId = tomcatCreation.id();
+        createdContainerIds.add(tomcatContainerId);
+
+        final HostConfig tomcatHostConfig = HostConfig.builder()
+                .build();
+
+        docker.startContainer(tomcatContainerId, tomcatHostConfig);
+
+        final ContainerInfo tomcatInfo = docker.inspectContainer(tomcatContainerId);
+        LOG.info("Tomcat container info: {}", tomcatInfo);
+        if (!tomcatInfo.state().running()) {
+            throw new IllegalStateException("Could not start Tomcat container");
+        }
+
+        containerInfo.put(TOMCAT, tomcatInfo);
     }
 
     /**

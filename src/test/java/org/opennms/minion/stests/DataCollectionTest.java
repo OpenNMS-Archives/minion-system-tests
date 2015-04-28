@@ -46,8 +46,10 @@ public class DataCollectionTest {
 
     private static final String FOREIGN_SOURCE = "CONTAINERS";
 
+    private static boolean provisioningDone = false;
+
     @ClassRule
-    public static MinionSystemTestRule minionLabTestRule = new NewMinionSystem();
+    public static MinionSystemTestRule minionLabTestRule = new ExistingMinionSystem(); //new NewMinionSystem(true);
 
     private RESTClient restClient;
 
@@ -56,6 +58,14 @@ public class DataCollectionTest {
         final InetSocketAddress dominionHttp = minionLabTestRule.getServiceAddress(NewMinionSystem.DOMINION, 8980);
         restClient = new RESTClient(dominionHttp);
 
+        // Only provision the nodes during the first execution
+        if (!provisioningDone) {
+            provisionNodes();
+            provisioningDone = true;
+        }
+    }
+
+    private void provisionNodes() {
         LOG.info("Creating and importing requisition.");
         createRequisitionAndImportNodes();
 
@@ -65,17 +75,26 @@ public class DataCollectionTest {
     }
 
     @Test
+    public void canCollectJMXMetrics() {
+        LOG.info("Waiting for metrics to be collected.");
+        // We wait 6 minutes here since the configuration is only refreshed every 5
+        final String resourceId = String.format("nodeSource[%s:%s].interfaceSnmp[jmx]", FOREIGN_SOURCE, NewMinionSystem.TOMCAT);
+        await().atMost(6, MINUTES).pollInterval(5, SECONDS).until(attributeHasCollectedValue(1, resourceId, "requestCount"));
+    }
+
+    @Test
     public void canCollectSNMPMetrics() {
         LOG.info("Waiting for metrics to be collected.");
         // We wait 6 minutes here since the configuration is only refreshed every 5
-        await().atMost(6, MINUTES).pollInterval(5, SECONDS).until(attributeHasCollectedValue(1, "nodeSource[CONTAINERS:snmpd].nodeSnmp[]", "loadavg1"));
+        final String resourceId = String.format("nodeSource[%s:%s].nodeSnmp[]", FOREIGN_SOURCE, NewMinionSystem.SNMPD);
+        await().atMost(6, MINUTES).pollInterval(5, SECONDS).until(attributeHasCollectedValue(1, resourceId, "loadavg1"));
     }
 
     private void createRequisitionAndImportNodes() {
         final Requisition requisition = new RequisitionBuilder(minionLabTestRule)
             .withForeignSourceName(FOREIGN_SOURCE)
             .withContainer(NewMinionSystem.SNMPD, "SNMP")
-            .withContainer(NewMinionSystem.TOMCAT, "HTTP-8080")
+            .withContainer(NewMinionSystem.TOMCAT, "HTTP-8080", "JMX")
             .build();
 
         LOG.info("Adding/replacing requisition: {}", requisition);

@@ -49,7 +49,7 @@ public class DataCollectionTest {
     private static boolean provisioningDone = false;
 
     @ClassRule
-    public static MinionSystemTestRule minionLabTestRule = new ExistingMinionSystem(); //new NewMinionSystem(true);
+    public static MinionSystemTestRule minionLabTestRule = new NewMinionSystem();
 
     private RESTClient restClient;
 

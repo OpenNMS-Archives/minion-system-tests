@@ -367,7 +367,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
             final SSHClient sshClient = new SSHClient(sshAddr, "admin", "admin");
         ) {
             PrintStream pipe = sshClient.openShell();
-            pipe.println("source http://localhost:8980/smnnepo/opennms-setup.karaf");
+            pipe.println("source http://localhost:8980/minion/opennms-setup.karaf");
             pipe.println("config:edit org.opennms.netmgt.sampler.storage.rrd");
             pipe.println("config:propset rrdStorageDirectory /opt/opennms/share/rrd/snmp");
             pipe.println("config:propset step 15");
@@ -428,7 +428,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
               + ";DOMINION_MQ_HOST=system:getenv DOMINION_PORT_61616_TCP_ADDR"
               + ";DOMINION_MQ_PORT=system:getenv DOMINION_PORT_61616_TCP_PORT"
               + ";DOMINION_HTTP=http://$DOMINION_HTTP_HOST:$DOMINION_HTTP_PORT"
-              + ";source $DOMINION_HTTP/smnnepo/smnnepo-setup.karaf %s admin admin $DOMINION_HTTP minion1",
+              + ";source $DOMINION_HTTP/minion/minion-setup.karaf %s admin admin $DOMINION_HTTP minion1",
               instanceName);
 
         try (

@@ -15,4 +15,4 @@ buildNumber.properties
 
 # Artifacts
 opennms*.tar.gz
-smnnepo.war
+minion.war

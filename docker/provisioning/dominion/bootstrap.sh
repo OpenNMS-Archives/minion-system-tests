@@ -9,9 +9,9 @@ if [ ! -f /opt/provisioning/opennms*.tar.gz ]; then
     exit 1
 fi
 
-# We need a smnnepo.war file
-if [ ! -f /opt/provisioning/smnnepo.war ]; then
-    echo "There is no smnnepo.war file located in /opt/provisioning."
+# We need a minion.war file
+if [ ! -f /opt/provisioning/minion.war ]; then
+    echo "There is no minion.war file located in /opt/provisioning."
     exit 1
 fi
 
@@ -20,7 +20,7 @@ mkdir -p ${OPENNMS_HOME}
 tar xvf /opt/provisioning/opennms*.tar.gz -C ${OPENNMS_HOME}
 
 # Copy the smnnepo server components to opennms
-cp /opt/provisioning/smnnepo.war ${OPENNMS_HOME}/jetty-webapps
+cp /opt/provisioning/minion.war ${OPENNMS_HOME}/jetty-webapps
 
 # Overwrite some default config parameters
 cp /opt/provisioning/etc/* ${OPENNMS_HOME}/etc/

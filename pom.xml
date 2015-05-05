@@ -7,7 +7,7 @@
   <description>Programmatic tests for Minion features.</description>
 
   <properties>
-    <opennmsVersion>16.0.0-SNAPSHOT</opennmsVersion>
+    <opennmsVersion>17.0.0-SNAPSHOT</opennmsVersion>
     <karafVersion>2.4.0</karafVersion>
   </properties>
 

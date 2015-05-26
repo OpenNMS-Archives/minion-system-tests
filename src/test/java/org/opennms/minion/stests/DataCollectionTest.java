@@ -78,7 +78,7 @@ public class DataCollectionTest {
     public void canCollectJMXMetrics() {
         LOG.info("Waiting for metrics to be collected.");
         // We wait 6 minutes here since the configuration is only refreshed every 5
-        final String resourceId = String.format("nodeSource[%s:%s].interfaceSnmp[jmx]", FOREIGN_SOURCE, NewMinionSystem.TOMCAT);
+        final String resourceId = "node[2].interfaceSnmp[jmx]";
         await().atMost(6, MINUTES).pollInterval(5, SECONDS).until(attributeHasCollectedValue(1, resourceId, "requestCount"));
     }
 
@@ -86,7 +86,7 @@ public class DataCollectionTest {
     public void canCollectSNMPMetrics() {
         LOG.info("Waiting for metrics to be collected.");
         // We wait 6 minutes here since the configuration is only refreshed every 5
-        final String resourceId = String.format("nodeSource[%s:%s].nodeSnmp[]", FOREIGN_SOURCE, NewMinionSystem.SNMPD);
+        final String resourceId = "node[1].nodeSnmp[]";
         await().atMost(6, MINUTES).pollInterval(5, SECONDS).until(attributeHasCollectedValue(1, resourceId, "loadavg1"));
     }
 
@@ -108,7 +108,7 @@ public class DataCollectionTest {
         return new Callable<Boolean>() {
             @Override
             public Boolean call() throws Exception {
-                LOG.info("Retrieving metrics...");
+                LOG.info("Retrieving measurements for attribute: {} on resourceId: {}", attribute, resourceId);
                 try {
                     final long now = new Date().getTime();
                     final QueryRequest request = new QueryRequest();
@@ -133,11 +133,11 @@ public class DataCollectionTest {
                         }
                     }
                 } catch (NotFoundException e) {
-                    LOG.warn("The metric was not found.");
+                    LOG.warn("The metric for attribute: {} on resourceId: {} was not found.", attribute, resourceId);
                     return false;
                 }
 
-                LOG.warn("No values found!");
+                LOG.warn("No values for attribute: {} on resourceId: {} were found.", attribute, resourceId);
                 return false;
             }
         };

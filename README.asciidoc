@@ -46,7 +46,7 @@ The Docker image for Dominion requires an archive of OpenNMS' full assembly.
 After obtaining the link:http://www.opennms.org/wiki/Developing_with_Git[sources], run the following to do a clean build and assembly.
 
 [NOTE]
-You need to checkout the +pjsm/2.0+ branch.
+You need to checkout the +develop+ branch.
 
 ----
 ./clean.pl && ./compile.pl && ./assemble.pl -Dopennms.home=/opt/opennms

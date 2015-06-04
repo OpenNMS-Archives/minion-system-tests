@@ -30,22 +30,22 @@
       <groupId>com.spotify</groupId>
       <artifactId>docker-client</artifactId>
       <classifier>shaded</classifier>
-      <version>2.7.19</version>
+      <version>2.7.26</version>
     </dependency>
     <dependency>
         <groupId>com.jcraft</groupId>
         <artifactId>jsch</artifactId>
-        <version>0.1.51</version>
+        <version>0.1.52</version>
     </dependency>
     <dependency>
         <groupId>org.slf4j</groupId>
         <artifactId>slf4j-simple</artifactId>
-        <version>1.7.10</version>
+        <version>1.7.12</version>
     </dependency>
     <dependency>
         <groupId>org.apache.cxf</groupId>
         <artifactId>cxf-rt-rs-client</artifactId>
-        <version>3.0.4</version>
+        <version>3.1.0</version>
     </dependency>
     <dependency>
         <groupId>junit</groupId>

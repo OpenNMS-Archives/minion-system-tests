@@ -81,7 +81,6 @@
     <collector service="SNMP" class-name="org.opennms.netmgt.collectd.SnmpCollector"/>
     <collector service="WMI" class-name="org.opennms.netmgt.collectd.WmiCollector"/>
     <collector service="JMX" class-name="org.opennms.netmgt.collectd.Jsr160Collector"/>
-    <collector service="OpenNMS-JVM" class-name="org.opennms.netmgt.collectd.Jsr160Collector"/>
     <collector service="VMware-VirtualMachine" class-name="org.opennms.netmgt.collectd.VmwareCollector"/>
     <collector service="VMware-HostSystem" class-name="org.opennms.netmgt.collectd.VmwareCollector"/>
     <collector service="VMwareCim-HostSystem" class-name="org.opennms.netmgt.collectd.VmwareCimCollector"/>

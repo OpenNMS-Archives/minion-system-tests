@@ -2,7 +2,7 @@ FROM java:8
 MAINTAINER jesse@opennms.com
 
 ENV OPENNMS_RELEASE stable
-RUN wget -O - http://debian.opennms.org/OPENNMS-GPG-KEY | sudo apt-key add -
+RUN wget -O - http://debian.opennms.org/OPENNMS-GPG-KEY | apt-key add -
 RUN echo "deb http://debian.opennms.org ${OPENNMS_RELEASE} main" > /etc/apt/sources.list.d/opennms.list
 RUN echo "deb-src http://debian.opennms.org ${OPENNMS_RELEASE} main" >> /etc/apt/sources.list.d/opennms.list
 

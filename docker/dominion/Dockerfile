@@ -1,4 +1,4 @@
-FROM dockerfile/java:oracle-java8
+FROM java:8
 MAINTAINER jesse@opennms.com
 
 ENV OPENNMS_RELEASE stable

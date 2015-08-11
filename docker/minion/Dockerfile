@@ -1,4 +1,4 @@
-FROM dockerfile/java:oracle-java8
+FROM java:8
 MAINTAINER jesse@opennms.com
 
 RUN wget http://apache.cs.utah.edu/karaf/2.4.0/apache-karaf-2.4.0.tar.gz; \

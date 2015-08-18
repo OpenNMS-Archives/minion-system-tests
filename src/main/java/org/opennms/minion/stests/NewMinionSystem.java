@@ -375,8 +375,11 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
             pipe.println("config:propset heartBeat 30");
             pipe.println("config:update");
             pipe.println("logout");
-            await().atMost(30, SECONDS).until(sshClient.isShellClosedCallable());
-            LOG.info("Karaf output: {}", sshClient.getStdout());
+            try {
+                await().atMost(2, MINUTES).until(sshClient.isShellClosedCallable());
+            } finally {
+                LOG.info("Karaf output: {}", sshClient.getStdout());
+            }
         }
 
         final InetSocketAddress jmxAddr = getServiceAddress(DOMINION, 18980);
@@ -438,8 +441,11 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
                 PrintStream pipe = sshClient.openShell();
                 pipe.println(script);
                 pipe.println("logout");
-                await().atMost(30, SECONDS).until(sshClient.isShellClosedCallable());
-                LOG.info("Karaf output: {}", sshClient.getStdout());
+                try {
+                    await().atMost(2, MINUTES).until(sshClient.isShellClosedCallable());
+                } finally {
+                    LOG.info("Karaf output: {}", sshClient.getStdout());
+                }
             }
     }
 }

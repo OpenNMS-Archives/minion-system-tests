@@ -419,7 +419,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
     private void configureMinionKarafInstance(final String instanceName, final int servicePort, final ContainerInfo minionInfo ) throws Exception {
         final InetSocketAddress sshAddr = getServiceAddress(MINION, servicePort);
 
-        LOG.info("Waiting for SSH service @ {}.", sshAddr);
+        LOG.info("Waiting for SSH service for Karaf instance {} @ {}.", instanceName, sshAddr);
         await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SSHClient.canConnectViaSsh(sshAddr, "karaf", "karaf"));
 
         final String script = String.format(

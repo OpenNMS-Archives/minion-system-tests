@@ -293,7 +293,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
     }
 
     /**
-     * Spawns the Minion container, linked to Dominion and Net-SNMP.
+     * Spawns the Minion container, linked to Dominion, Net-SNMP and Tomcat.
      */
     private void spawnMinion() throws DockerException, InterruptedException {
         final ContainerConfig minionConfig = ContainerConfig.builder()
@@ -306,6 +306,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         final List<String> links = Lists.newArrayList();
         links.add(String.format("%s:dominion", containerInfo.get(DOMINION).name()));
         links.add(String.format("%s:snmpd", containerInfo.get(SNMPD).name()));
+        links.add(String.format("%s:tomcat", containerInfo.get(TOMCAT).name()));
 
         final HostConfig minionHostConfig = HostConfig.builder()
                 .publishAllPorts(true)

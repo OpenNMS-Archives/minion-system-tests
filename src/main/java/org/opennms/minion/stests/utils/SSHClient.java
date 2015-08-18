@@ -143,7 +143,7 @@ public class SSHClient implements AutoCloseable {
                 try (
                     final SSHClient client = new SSHClient(addr, username, password);
                 ) {
-                    client.setTimeout(250);
+                    client.setTimeout(1000);
                     client.openShell();
                     return true;
                 } catch (Throwable t) {

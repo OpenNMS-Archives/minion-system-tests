@@ -13,6 +13,7 @@ import javax.ws.rs.NotFoundException;
 
 import org.junit.Before;
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.opennms.minion.stests.MinionSystemTestRule;
 import org.opennms.minion.stests.NewMinionSystem;
@@ -75,6 +76,7 @@ public class DataCollectionTest {
     }
 
     @Test
+    @Ignore(value="See PJSM-257")
     public void canCollectJMXMetrics() {
         LOG.info("Waiting for metrics to be collected.");
         // We wait 6 minutes here since the configuration is only refreshed every 5

@@ -6,7 +6,7 @@ RUN wget -O - http://debian.opennms.org/OPENNMS-GPG-KEY | apt-key add -
 RUN echo "deb http://debian.opennms.org ${OPENNMS_RELEASE} main" > /etc/apt/sources.list.d/opennms.list
 RUN echo "deb-src http://debian.opennms.org ${OPENNMS_RELEASE} main" >> /etc/apt/sources.list.d/opennms.list
 
-RUN apt-get update && apt-get install -y jicmp jicmp6 jrrd rrdtool
+RUN apt-get update && apt-get install -y jicmp jicmp6 jrrd rrdtool net-tools
 
 # Webapp
 EXPOSE 8980

@@ -425,27 +425,43 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         LOG.info("Waiting for SSH service for Karaf instance {} @ {}.", instanceName, sshAddr);
         await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SSHClient.canConnectViaSsh(sshAddr, "karaf", "karaf"));
 
-        final String script = String.format(
-                "addcommand system (($.context bundle) loadClass java.lang.System)"
-              + ";DOMINION_HTTP_HOST=system:getenv DOMINION_PORT_8980_TCP_ADDR"
-              + ";DOMINION_HTTP_PORT=system:getenv DOMINION_PORT_8980_TCP_PORT"
-              + ";DOMINION_MQ_HOST=system:getenv DOMINION_PORT_61616_TCP_ADDR"
-              + ";DOMINION_MQ_PORT=system:getenv DOMINION_PORT_61616_TCP_PORT"
-              + ";DOMINION_HTTP=http://$DOMINION_HTTP_HOST:$DOMINION_HTTP_PORT"
-              + ";source $DOMINION_HTTP/minion/minion-setup.karaf %s admin admin $DOMINION_HTTP minion1",
-              instanceName);
+        // These scripts can fail from time to time, so we try running them a few times before failing.
+        final int NUM_RETRIES = 2;
+        for (int k = 0; k <= NUM_RETRIES; k++) {
+            LOG.info("Running setup script on Karaf instance {} (retry #{} of {}).", instanceName, k, NUM_RETRIES);
+            final String script = String.format(
+                    "addcommand system (($.context bundle) loadClass java.lang.System)"
+                  + ";DOMINION_HTTP_HOST=system:getenv DOMINION_PORT_8980_TCP_ADDR"
+                  + ";DOMINION_HTTP_PORT=system:getenv DOMINION_PORT_8980_TCP_PORT"
+                  + ";DOMINION_MQ_HOST=system:getenv DOMINION_PORT_61616_TCP_ADDR"
+                  + ";DOMINION_MQ_PORT=system:getenv DOMINION_PORT_61616_TCP_PORT"
+                  + ";DOMINION_HTTP=http://$DOMINION_HTTP_HOST:$DOMINION_HTTP_PORT"
+                  + ";source $DOMINION_HTTP/minion/minion-setup.karaf %s admin admin $DOMINION_HTTP minion1",
+                  instanceName);
 
-        try (
-                final SSHClient sshClient = new SSHClient(sshAddr, "karaf", "karaf");
-            ) {
-                PrintStream pipe = sshClient.openShell();
-                pipe.println(script);
-                pipe.println("logout");
-                try {
-                    await().atMost(2, MINUTES).until(sshClient.isShellClosedCallable());
-                } finally {
-                    LOG.info("Karaf output: {}", sshClient.getStdout());
+            try (
+                    final SSHClient sshClient = new SSHClient(sshAddr, "karaf", "karaf");
+                ) {
+                    PrintStream pipe = sshClient.openShell();
+                    pipe.println(script);
+                    pipe.println("logout");
+                    try {
+                        await().atMost(1, MINUTES).until(sshClient.isShellClosedCallable());
+                    } finally {
+                        LOG.info("Karaf output: {}", sshClient.getStdout());
+                    }
                 }
+            catch (Throwable t) {
+                if (k == NUM_RETRIES) {
+                    // Re-throw the exception after the last retry
+                    throw t;
+                }
+                // Otherwise, try again
+                continue;
             }
+
+            // No exceptions, we're done
+            break;
+        }
     }
 }

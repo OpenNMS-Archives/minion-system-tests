@@ -21,10 +21,10 @@ import org.opennms.minion.stests.utils.RESTClient;
 import org.opennms.minion.stests.utils.RequisitionBuilder;
 import org.opennms.netmgt.model.OnmsNode;
 import org.opennms.netmgt.provision.persist.requisition.Requisition;
-import org.opennms.web.rest.measurements.model.QueryRequest;
-import org.opennms.web.rest.measurements.model.QueryResponse;
-import org.opennms.web.rest.measurements.model.QueryResponse.WrappedPrimitive;
-import org.opennms.web.rest.measurements.model.Source;
+import org.opennms.netmgt.measurements.model.QueryRequest;
+import org.opennms.netmgt.measurements.model.QueryResponse;
+import org.opennms.netmgt.measurements.model.QueryResponse.WrappedPrimitive;
+import org.opennms.netmgt.measurements.model.Source;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

@@ -7,7 +7,7 @@
   <description>Programmatic tests for Minion features.</description>
 
   <properties>
-    <opennmsVersion>17.0.0-SNAPSHOT</opennmsVersion>
+    <opennmsVersion>18.0.0-SNAPSHOT</opennmsVersion>
     <karafVersion>2.4.0</karafVersion>
   </properties>
 
@@ -77,8 +77,8 @@
 
     <!-- Used to access the model classes used by OpenNMS' ReST API -->
     <dependency>
-        <groupId>org.opennms.features</groupId>
-        <artifactId>org.opennms.features.rest-measurements-api</artifactId>
+        <groupId>org.opennms.features.measurements</groupId>
+        <artifactId>org.opennms.features.measurements.api</artifactId>
         <version>${opennmsVersion}</version>
         <!-- Exclude all transitive dependencies -->
         <exclusions>

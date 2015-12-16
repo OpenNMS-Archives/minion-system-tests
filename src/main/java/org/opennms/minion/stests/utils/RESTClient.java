@@ -13,8 +13,8 @@ import javax.ws.rs.core.MediaType;
 import org.apache.cxf.common.util.Base64Utility;
 import org.opennms.netmgt.model.OnmsNode;
 import org.opennms.netmgt.provision.persist.requisition.Requisition;
-import org.opennms.web.rest.measurements.model.QueryRequest;
-import org.opennms.web.rest.measurements.model.QueryResponse;
+import org.opennms.netmgt.measurements.model.QueryRequest;
+import org.opennms.netmgt.measurements.model.QueryResponse;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;

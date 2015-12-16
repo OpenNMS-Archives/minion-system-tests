@@ -388,7 +388,6 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         FeaturesServiceMBean featuresService = mbeanHelper.getFeaturesService("opennms");
 
         // These features should be installed by the setup script
-        assertThat(isFeatureInstalled(featuresService, "opennms-activemq"), is(true));
         assertThat(isFeatureInstalled(featuresService, "sample-receiver-activemq"), is(true));
         assertThat(isFeatureInstalled(featuresService, "minion-base"), is(true));
         assertThat(isFeatureInstalled(featuresService, "dominion-controller-statuswriter-dao"), is(true));

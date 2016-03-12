@@ -37,7 +37,7 @@ import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.spotify.docker.client.DefaultDockerClient;
 import com.spotify.docker.client.DockerClient;
-import com.spotify.docker.client.DockerClient.LogsParameter;
+import com.spotify.docker.client.DockerClient.LogsParam;
 import com.spotify.docker.client.DockerException;
 import com.spotify.docker.client.LogStream;
 import com.spotify.docker.client.messages.ContainerConfig;
@@ -135,7 +135,7 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         LOG.info("Gathering container output...");
         for (String containerId : createdContainerIds) {
             try {
-                LogStream logStream = docker.logs(containerId, LogsParameter.STDOUT, LogsParameter.STDERR);
+                LogStream logStream = docker.logs(containerId, LogsParam.stdout(), LogsParam.stderr());
                 LOG.info("Stdout/stderr for {}: {}", containerId, logStream.readFully());
             } catch (DockerException | InterruptedException e) {
                 LOG.warn("Failed to get stdout/stderr for container {}.", e);
@@ -185,20 +185,21 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
      * Spawns the PostgreSQL container.
      */
     private void spawnPostgres() throws DockerException, InterruptedException {
+        final HostConfig postgresHostConfig = HostConfig.builder()
+                .publishAllPorts(true)
+                .build();
+
         final ContainerConfig postgresConfig = ContainerConfig.builder()
                 .image("postgres")
                 .env("POSTGRES_PASSWORD=postgres")
+                .hostConfig(postgresHostConfig)
                 .build();
 
         final ContainerCreation postgresCreation = docker.createContainer(postgresConfig);
         final String postgresContainerId = postgresCreation.id();
         createdContainerIds.add(postgresContainerId);
 
-        final HostConfig postgresHostBuilder = HostConfig.builder()
-                .publishAllPorts(true)
-                .build();
-
-        docker.startContainer(postgresContainerId, postgresHostBuilder);
+        docker.startContainer(postgresContainerId);
 
         final ContainerInfo postgresInfo = docker.inspectContainer(postgresContainerId);
         LOG.info("Postgres container info: {}", postgresInfo);
@@ -213,14 +214,6 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
      * Spawns the Dominion container, linked to PostgreSQL.
      */
     private void spawnDominion() throws DockerException, InterruptedException {
-        final ContainerConfig dominionConfig = ContainerConfig.builder()
-                .image("dominion:v1")
-                .build();
-
-        final ContainerCreation dominionCreation = docker.createContainer(dominionConfig);
-        final String dominionContainerId = dominionCreation.id();
-        createdContainerIds.add(dominionContainerId);
-
         final HostConfig dominionHostConfig = HostConfig.builder()
                 .privileged(true)
                 .publishAllPorts(true)
@@ -229,7 +222,16 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
                 .links(String.format("%s:postgres", containerInfo.get(POSTGRES).name()))
                 .build();
 
-        docker.startContainer(dominionContainerId, dominionHostConfig);
+        final ContainerConfig dominionConfig = ContainerConfig.builder()
+                .image("dominion:v1")
+                .hostConfig(dominionHostConfig)
+                .build();
+
+        final ContainerCreation dominionCreation = docker.createContainer(dominionConfig);
+        final String dominionContainerId = dominionCreation.id();
+        createdContainerIds.add(dominionContainerId);
+
+        docker.startContainer(dominionContainerId);
 
         final ContainerInfo dominionInfo = docker.inspectContainer(dominionContainerId);
         LOG.info("Dominion container info: {}", dominionInfo);
@@ -244,18 +246,19 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
      * Spawns the Net-SNMP container.
      */
     private void spawnSnmpd() throws DockerException, InterruptedException {
+        final HostConfig snmpdHostConfig = HostConfig.builder()
+                .build();
+
         final ContainerConfig snmpdConfig = ContainerConfig.builder()
                 .image("snmpd:v1")
+                .hostConfig(snmpdHostConfig)
                 .build();
 
         final ContainerCreation snmpdCreation = docker.createContainer(snmpdConfig);
         final String snmpdContainerId = snmpdCreation.id();
         createdContainerIds.add(snmpdContainerId);
 
-        final HostConfig snmpdHostConfig = HostConfig.builder()
-                .build();
-
-        docker.startContainer(snmpdContainerId, snmpdHostConfig);
+        docker.startContainer(snmpdContainerId);
 
         final ContainerInfo snmpdInfo = docker.inspectContainer(snmpdContainerId);
         LOG.info("Snmpd container info: {}", snmpdInfo);
@@ -270,18 +273,19 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
      * Spawns the Tomcat container.
      */
     private void spawnTomcat() throws DockerException, InterruptedException {
+        final HostConfig tomcatHostConfig = HostConfig.builder()
+                .build();
+
         final ContainerConfig tomcatConfig = ContainerConfig.builder()
                 .image("tomcat:v1")
+                .hostConfig(tomcatHostConfig)
                 .build();
 
         final ContainerCreation tomcatCreation = docker.createContainer(tomcatConfig);
         final String tomcatContainerId = tomcatCreation.id();
         createdContainerIds.add(tomcatContainerId);
 
-        final HostConfig tomcatHostConfig = HostConfig.builder()
-                .build();
-
-        docker.startContainer(tomcatContainerId, tomcatHostConfig);
+        docker.startContainer(tomcatContainerId);
 
         final ContainerInfo tomcatInfo = docker.inspectContainer(tomcatContainerId);
         LOG.info("Tomcat container info: {}", tomcatInfo);
@@ -296,13 +300,6 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
      * Spawns the Minion container, linked to Dominion, Net-SNMP and Tomcat.
      */
     private void spawnMinion() throws DockerException, InterruptedException {
-        final ContainerConfig minionConfig = ContainerConfig.builder()
-                .image("minion:v1")
-                .build();
-
-        final ContainerCreation minionCreation = docker.createContainer(minionConfig);
-        final String minionContainerId = minionCreation.id();
-        createdContainerIds.add(minionContainerId);
         final List<String> links = Lists.newArrayList();
         links.add(String.format("%s:dominion", containerInfo.get(DOMINION).name()));
         links.add(String.format("%s:snmpd", containerInfo.get(SNMPD).name()));
@@ -313,7 +310,16 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
                 .links(links)
                 .build();
 
-        docker.startContainer(minionContainerId, minionHostConfig);
+        final ContainerConfig minionConfig = ContainerConfig.builder()
+                .image("minion:v1")
+                .hostConfig(minionHostConfig)
+                .build();
+
+        final ContainerCreation minionCreation = docker.createContainer(minionConfig);
+        final String minionContainerId = minionCreation.id();
+        createdContainerIds.add(minionContainerId);
+
+        docker.startContainer(minionContainerId);
 
         final ContainerInfo minionInfo = docker.inspectContainer(minionContainerId);
         LOG.info("Minion container info: {}", minionInfo);

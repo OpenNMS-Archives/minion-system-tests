@@ -25,37 +25,37 @@
  *     http://www.opennms.org/
  *     http://www.opennms.com/
  *******************************************************************************/
-package org.opennms.minion.stests.utils;
+package org.opennms.minion.stests;
 
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.util.concurrent.Callable;
+import java.util.Set;
+
+import org.junit.rules.TestRule;
+import org.opennms.minion.stests.NewMinionSystem.ContainerAlias;
+
+import com.spotify.docker.client.messages.ContainerInfo;
 
 /**
- * Utilities for testing network connectivity.
+ * The system test rule is responsible for ensuring that a valid
+ * Minion System is setup before invoking any tests.
  *
+ * Further, the test rule must provide all of the details required
+ * to communicate with the Minion System, whether it be on the current
+ * or a remote host.
+ * 
  * @author jwhite
  */
-public class NetUtils {
+public interface MinionSystem extends TestRule {
 
-    public static boolean isTcpPortOpen(int port) {
-        return isTcpPortOpen(new InetSocketAddress("127.0.0.1", port));
-    }
+    public InetSocketAddress getServiceAddress(ContainerAlias alias, int port);
 
-    public static boolean isTcpPortOpen(InetSocketAddress addr) {
-        try (Socket socket = new Socket()) {
-            socket.connect(addr, 100);
-            return true;
-        } catch (Exception ex) {
-            return false;
-        }
-    }
+    public InetSocketAddress getServiceAddress(ContainerAlias alias, int port, String type);
 
-    public static Callable<Boolean> isTcpPortOpenCallable(final int port) {
-        return new Callable<Boolean>() {
-            public Boolean call() throws Exception {
-                return isTcpPortOpen(port);
-            }
-        };
+    public ContainerInfo getContainerInfo(ContainerAlias alias);
+
+    public Set<ContainerAlias> getContainerAliases();
+
+    public static MinionSystemBuilder builder() {
+        return new MinionSystemBuilder();
     }
 }

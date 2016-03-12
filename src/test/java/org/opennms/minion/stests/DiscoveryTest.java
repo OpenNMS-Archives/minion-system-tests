@@ -27,16 +27,98 @@
  *******************************************************************************/
 package org.opennms.minion.stests;
 
+import static com.jayway.awaitility.Awaitility.await;
+import static java.util.concurrent.TimeUnit.MINUTES;
+import static org.hamcrest.Matchers.greaterThan;
+
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Date;
+
+import org.apache.http.HttpHost;
+import org.apache.http.client.ClientProtocolException;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.fluent.Executor;
+import org.apache.http.client.fluent.Form;
+import org.apache.http.client.fluent.Request;
+import org.apache.http.impl.client.HttpClientBuilder;
+import org.apache.http.impl.client.LaxRedirectStrategy;
 import org.junit.ClassRule;
 import org.junit.Test;
+import org.opennms.core.criteria.Criteria;
+import org.opennms.core.criteria.CriteriaBuilder;
+import org.opennms.minion.stests.NewMinionSystem.ContainerAlias;
+import org.opennms.minion.stests.utils.DaoUtils;
+import org.opennms.minion.stests.utils.HibernateDaoFactory;
+import org.opennms.netmgt.dao.api.EventDao;
+import org.opennms.netmgt.dao.hibernate.EventDaoHibernate;
+import org.opennms.netmgt.events.api.EventConstants;
+import org.opennms.netmgt.model.OnmsEvent;
 
+/**
+ * Verifies that we can issue scans on the Minion and generate newSuspect events.
+ *
+ * @author jwhite
+ */
 public class DiscoveryTest {
 
     @ClassRule
-    public static MinionSystemTestRule minionLabTestRule = new NewMinionSystem();
+    public static MinionSystem minionSystem = MinionSystem.builder().build();
 
     @Test
-    public void canSetupSystem() {
-        
+    public void canDiscoverRemoteNodes() throws ClientProtocolException, IOException {
+        Date startOfTest = new Date();
+ 
+        final String tomcatIp = minionSystem.getContainerInfo(ContainerAlias.TOMCAT)
+                .networkSettings().ipAddress();
+        final InetSocketAddress opennmsHttp = minionSystem.getServiceAddress(ContainerAlias.OPENNMS, 8980);
+        final HttpHost opennmsHttpHost = new HttpHost(opennmsHttp.getAddress().getHostAddress(), opennmsHttp.getPort());
+
+        HttpClient instance = HttpClientBuilder.create()
+                .setRedirectStrategy(new LaxRedirectStrategy()) // Ignore the 302 response to the POST
+                .build();
+
+        Executor executor = Executor.newInstance(instance)
+                .auth(opennmsHttpHost, "admin", "admin")
+                .authPreemptive(opennmsHttpHost);
+
+        // Configure Discovery with the specific address of our Tomcat server
+        // No REST endpoint is currently available, so we resort to POSTin nasty form data
+        executor.execute(Request.Post(String.format("http://%s:%d/opennms/admin/discovery/actionDiscovery?action=AddSpecific",
+                opennmsHttp.getAddress().getHostAddress(), opennmsHttp.getPort()))
+            .bodyForm(Form.form()
+                    .add("specificipaddress", tomcatIp)
+                    .add("specifictimeout", "2000")
+                    .add("specificretries", "1")
+                    .add("initialsleeptime", "30000")
+                    .add("restartsleeptime", "86400000")
+                    .add("foreignsource", "NODES")
+                    .add("location", "MINION")
+                    .add("retries", "1")
+                    .add("timeout", "2000")
+                    .build())).returnContent();
+
+        executor.execute(Request.Post(String.format("http://%s:%d/opennms/admin/discovery/actionDiscovery?action=SaveAndRestart",
+                opennmsHttp.getAddress().getHostAddress(), opennmsHttp.getPort()))
+            .bodyForm(Form.form()
+                    .add("initialsleeptime", "1")
+                    .add("restartsleeptime", "86400000")
+                    .add("foreignsource", "NODES")
+                    .add("location", "MINION")
+                    .add("retries", "1")
+                    .add("timeout", "2000")
+                    .build())).returnContent();
+
+        InetSocketAddress pgsql = minionSystem.getServiceAddress(ContainerAlias.POSTGRES, 5432);
+        HibernateDaoFactory daoFactory = new HibernateDaoFactory(pgsql);
+        EventDao eventDao = daoFactory.getDao(EventDaoHibernate.class);
+
+        // TODO: Match the Monitoring System ID when this becomes available in the event
+        Criteria criteria = new CriteriaBuilder(OnmsEvent.class)
+                .eq("eventUei", EventConstants.NEW_SUSPECT_INTERFACE_EVENT_UEI)
+                .ge("eventTime", startOfTest)
+                .toCriteria();
+
+        await().atMost(5, MINUTES).until(DaoUtils.countMatchingCallable(eventDao, criteria), greaterThan(0));
     }
 }

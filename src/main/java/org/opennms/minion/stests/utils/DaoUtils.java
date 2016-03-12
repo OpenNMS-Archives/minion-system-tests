@@ -27,35 +27,22 @@
  *******************************************************************************/
 package org.opennms.minion.stests.utils;
 
-import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.util.concurrent.Callable;
 
+import org.opennms.core.criteria.Criteria;
+import org.opennms.netmgt.dao.api.OnmsDao;
+
 /**
- * Utilities for testing network connectivity.
+ * DAO utility thingies.
  *
  * @author jwhite
  */
-public class NetUtils {
-
-    public static boolean isTcpPortOpen(int port) {
-        return isTcpPortOpen(new InetSocketAddress("127.0.0.1", port));
-    }
-
-    public static boolean isTcpPortOpen(InetSocketAddress addr) {
-        try (Socket socket = new Socket()) {
-            socket.connect(addr, 100);
-            return true;
-        } catch (Exception ex) {
-            return false;
-        }
-    }
-
-    public static Callable<Boolean> isTcpPortOpenCallable(final int port) {
-        return new Callable<Boolean>() {
-            public Boolean call() throws Exception {
-                return isTcpPortOpen(port);
-            }
+public class DaoUtils {
+    public static Callable<Integer> countMatchingCallable(OnmsDao<?,?> dao, Criteria criteria) {
+        return new Callable<Integer>() {
+              public Integer call() throws Exception {
+                  return dao.countMatching(criteria);
+              }
         };
     }
 }

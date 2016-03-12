@@ -1,14 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.opennms.minion</groupId>
   <artifactId>minion-system-tests</artifactId>
-  <version>1.0.0-SNAPSHOT</version>
+  <version>1.0-SNAPSHOT</version>
   <name>Minion System Tests</name>
-  <description>Programmatic tests for Minion features.</description>
+  <description>Full stack testing of Minion features.</description>
 
   <properties>
     <opennmsVersion>18.0.0-SNAPSHOT</opennmsVersion>
-    <karafVersion>2.4.0</karafVersion>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
 
   <build>
@@ -40,8 +42,18 @@
     </dependency>
     <dependency>
         <groupId>org.slf4j</groupId>
-        <artifactId>slf4j-simple</artifactId>
+        <artifactId>slf4j-api</artifactId>
         <version>1.7.18</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-slf4j-impl</artifactId>
+        <version>2.5</version>
+    </dependency>
+    <dependency>
+        <groupId>org.apache.logging.log4j</groupId>
+        <artifactId>log4j-core</artifactId>
+        <version>2.5</version>
     </dependency>
     <dependency>
         <groupId>org.apache.cxf</groupId>
@@ -68,12 +80,10 @@
         <artifactId>postgresql</artifactId>
         <version>9.4.1208.jre7</version>
     </dependency>
-
-    <!-- Karaf management MBeans -->
     <dependency>
-        <groupId>org.apache.karaf.features</groupId>
-        <artifactId>org.apache.karaf.features.management</artifactId>
-        <version>${karafVersion}</version>
+        <groupId>org.apache.httpcomponents</groupId>
+        <artifactId>fluent-hc</artifactId>
+        <version>4.5.2</version>
     </dependency>
 
     <!-- Used to access the model classes used by OpenNMS' ReST API -->
@@ -109,6 +119,11 @@
     <dependency>
         <groupId>org.opennms.core</groupId>
         <artifactId>org.opennms.core.lib</artifactId>
+        <version>${opennmsVersion}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.opennms</groupId>
+        <artifactId>opennms-dao</artifactId>
         <version>${opennmsVersion}</version>
     </dependency>
   </dependencies>

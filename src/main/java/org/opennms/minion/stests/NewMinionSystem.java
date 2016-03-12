@@ -1,15 +1,40 @@
+/*******************************************************************************
+ * This file is part of OpenNMS(R).
+ *
+ * Copyright (C) 2016 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2016 The OpenNMS Group, Inc.
+ *
+ * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
+ *
+ * OpenNMS(R) is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License,
+ * or (at your option) any later version.
+ *
+ * OpenNMS(R) is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with OpenNMS(R).  If not, see:
+ *      http://www.gnu.org/licenses/
+ *
+ * For more information contact:
+ *     OpenNMS(R) Licensing <license@opennms.org>
+ *     http://www.opennms.org/
+ *     http://www.opennms.com/
+ *******************************************************************************/
 package org.opennms.minion.stests;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.is;
+import static org.hamcrest.Matchers.notNullValue;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -20,19 +45,12 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
 
-import jersey.repackaged.com.google.common.collect.Lists;
-
-import org.apache.karaf.features.management.FeaturesServiceMBean;
-import org.opennms.minion.stests.junit.ExternalResourceRule;
-import org.opennms.minion.stests.utils.DBUtils;
-import org.opennms.minion.stests.utils.KarafMBeanProxyHelper;
-import org.opennms.minion.stests.utils.RESTClient;
-import org.opennms.minion.stests.utils.SSHClient;
+import org.opennms.minion.stests.utils.RestClient;
+import org.opennms.minion.stests.utils.SshClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.opennms.minion.stests.utils.KarafMBeanHelper.isFeatureInstalled;
-
+import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import com.spotify.docker.client.DefaultDockerClient;
@@ -44,41 +62,70 @@ import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.ContainerInfo;
 import com.spotify.docker.client.messages.HostConfig;
-import com.spotify.docker.client.messages.PortBinding;
+
+import jersey.repackaged.com.google.common.collect.Lists;
 
 /**
- * Spawns and configures a collection of Docker containers running
- * the Minion Service.
+ * Spawns and configures a collection of Docker containers running the Minion System.
  *
  * In particular, this is composed of:
  *  1) postgres: An instance of PostgreSQL 
- *  2) dominion: An instance of OpenNMS with the SMNepO WAR 
- *  3) snmpd: An instance of Net-SNMP
- *  4) minion: An instance of Karaf runing the Minion features
+ *  2) opennms: An instance of OpenNMS
+ *  3) minion: An instance of Minion
+ *  4) snmpd: An instance of Net-SNMP (used to test SNMP support)
+ *  5) tomcat: An instance of Tomcat (used to test JMX support)
  *
  * @author jwhite
  */
-public class NewMinionSystem extends ExternalResourceRule implements MinionSystemTestRule {
+public class NewMinionSystem extends AbstractMinionSystem implements MinionSystem {
 
     private static final Logger LOG = LoggerFactory.getLogger(NewMinionSystem.class);
 
-    // Aliases used to refer to the containers
-    // Note that these are not the container ids or names
-    public static final String POSTGRES = "postgres";
-    public static final String DOMINION = "dominion";
-    public static final String MINION = "minion";
-    public static final String SNMPD = "snmpd";
-    public static final String TOMCAT = "tomcat";
+    /**
+     * Aliases used to refer to the containers within the tests
+     * Note that these are not the container IDs or names
+     */
+    public static enum ContainerAlias {
+        POSTGRES,
+        OPENNMS,
+        MINION,
+        SNMPD,
+        TOMCAT
+    }
 
-    // Set if the containers should be kept running after the tests complete
-    // (whether or not these were successful)
+    /**
+     * Mapping from the alias to the Docker image name
+     */
+    public static final ImmutableMap<ContainerAlias, String> IMAGES_BY_ALIAS =
+            new ImmutableMap.Builder<ContainerAlias, String>()
+                .put(ContainerAlias.POSTGRES, "postgres:9.5.1")
+                .put(ContainerAlias.OPENNMS, "stests/opennms")
+                .put(ContainerAlias.MINION, "stests/minion")
+                .put(ContainerAlias.SNMPD, "stests/snmpd")
+                .put(ContainerAlias.TOMCAT, "stests/tomcat")
+                .build();
+
+    /**
+     * Set if the containers should be kept running after the tests complete
+     * (regardless of whether or not they were successful)
+     */
     private final boolean skipTearDown;
-
-    private File dockerProvisioningDir;
-    private DockerClient docker;
-    // Used to keep track of the ids for all the created containers
+    
+    /**
+     * Keeps track of the IDs for all the created containers sp we can
+     * (possibly) tear them down later
+     */
     private final Set<String> createdContainerIds = Sets.newHashSet();
-    private final Map<String, ContainerInfo> containerInfo = Maps.newHashMap();
+
+    /**
+     * Keep track of container meta-data
+     */
+    private final Map<ContainerAlias, ContainerInfo> containerInfoByAlias = Maps.newHashMap();
+
+    /**
+     * The Docker daemon client
+     */
+    private DockerClient docker;
 
     public NewMinionSystem() {
         this(false);
@@ -90,22 +137,15 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
 
     @Override
     protected void before() throws Throwable {
-        dockerProvisioningDir = Paths.get(System.getProperty("user.dir"), "docker", "provisioning").toFile();
-        // Fail early
-        assertThat(dockerProvisioningDir.exists(), is(true));
-
         docker = DefaultDockerClient.fromEnv().build();
 
         spawnPostgres();
-        // Wait for PostgreSQL to make sure that it's available when Dominion starts
-        // Otherwise, the install script may fail
-        waitForPostgres();
-        spawnDominion();
+        spawnOpenNMS();
         spawnSnmpd();
         spawnTomcat();
         spawnMinion();
-        configureDominion();
-        configureMinion();
+        waitForMinion();
+        waitForOpenNMS();
     };
 
     @Override
@@ -117,19 +157,19 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
 
         // Ideally, we would only gather the logs and container output
         // when we fail, but we can't detect this when using @ClassRules
-        final ContainerInfo dominionContainerInfo = containerInfo.get(DOMINION);
-        if (dominionContainerInfo != null) {
-            LOG.info("Gathering Dominion logs...");
-            final Path destination = Paths.get("target/dominion.logs.tar");
+        final ContainerInfo opennmsContainerInfo = containerInfoByAlias.get(ContainerAlias.OPENNMS);
+        if (opennmsContainerInfo != null) {
+            LOG.info("Gathering OpenNMS logs...");
+            final Path destination = Paths.get("target/opennms.logs.tar");
             try (
-                    final InputStream in = docker.copyContainer(dominionContainerInfo.id(), "/opt/opennms/logs");
+                    final InputStream in = docker.copyContainer(opennmsContainerInfo.id(), "/opt/opennms/logs");
             ) {
                 Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
             } catch (DockerException|InterruptedException|IOException e) {
                 LOG.warn("Failed to copy the logs directory from the Dominion container.", e);
             }
         } else {
-            LOG.warn("No Dominion container provisioned. Logs won't be copied.");
+            LOG.warn("No OpenNMS container provisioned. Logs won't be copied.");
         }
 
         LOG.info("Gathering container output...");
@@ -161,24 +201,13 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
     };
 
     @Override
-    public InetSocketAddress getServiceAddress(String alias, int port) {
-        final ContainerInfo info = containerInfo.get(alias);
-        if (info == null) {
-            return null;
-        }
-        final PortBinding binding = info.networkSettings().ports().get(port + "/tcp").get(0);
-        final String host = "0.0.0.0".equals(binding.hostIp()) ? "127.0.0.1" : binding.hostIp();
-        return new InetSocketAddress(host, Integer.valueOf(binding.hostPort()));
+    public Set<ContainerAlias> getContainerAliases() {
+        return containerInfoByAlias.keySet();
     }
 
     @Override
-    public Set<String> getContainerAliases() {
-        return containerInfo.keySet();
-    }
-
-    @Override
-    public ContainerInfo getContainerInfo(final String containerAlias) {
-        return containerInfo.get(containerAlias);
+    public ContainerInfo getContainerInfo(final ContainerAlias alias) {
+        return containerInfoByAlias.get(alias);
     }
 
     /**
@@ -188,167 +217,81 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         final HostConfig postgresHostConfig = HostConfig.builder()
                 .publishAllPorts(true)
                 .build();
-
-        final ContainerConfig postgresConfig = ContainerConfig.builder()
-                .image("postgres")
-                .env("POSTGRES_PASSWORD=postgres")
-                .hostConfig(postgresHostConfig)
-                .build();
-
-        final ContainerCreation postgresCreation = docker.createContainer(postgresConfig);
-        final String postgresContainerId = postgresCreation.id();
-        createdContainerIds.add(postgresContainerId);
-
-        docker.startContainer(postgresContainerId);
-
-        final ContainerInfo postgresInfo = docker.inspectContainer(postgresContainerId);
-        LOG.info("Postgres container info: {}", postgresInfo);
-        if (!postgresInfo.state().running()) {
-            throw new IllegalStateException("Could not start Postgres container");
-        }
-
-        containerInfo.put(POSTGRES, postgresInfo);
+        spawnContainer(ContainerAlias.POSTGRES, postgresHostConfig);
     }
 
     /**
-     * Spawns the Dominion container, linked to PostgreSQL.
+     * Spawns the OpenNMS container, linked to PostgreSQL.
      */
-    private void spawnDominion() throws DockerException, InterruptedException {
-        final HostConfig dominionHostConfig = HostConfig.builder()
+    private void spawnOpenNMS() throws DockerException, InterruptedException {
+        final HostConfig opennmsHostConfig = HostConfig.builder()
                 .privileged(true)
                 .publishAllPorts(true)
-                .binds(String.format("%s:/opt/provisioning",
-                        new File(dockerProvisioningDir, "dominion").getAbsolutePath()))
-                .links(String.format("%s:postgres", containerInfo.get(POSTGRES).name()))
+                .links(String.format("%s:postgres", containerInfoByAlias.get(ContainerAlias.POSTGRES).name()))
                 .build();
-
-        final ContainerConfig dominionConfig = ContainerConfig.builder()
-                .image("dominion:v1")
-                .hostConfig(dominionHostConfig)
-                .build();
-
-        final ContainerCreation dominionCreation = docker.createContainer(dominionConfig);
-        final String dominionContainerId = dominionCreation.id();
-        createdContainerIds.add(dominionContainerId);
-
-        docker.startContainer(dominionContainerId);
-
-        final ContainerInfo dominionInfo = docker.inspectContainer(dominionContainerId);
-        LOG.info("Dominion container info: {}", dominionInfo);
-        if (!dominionInfo.state().running()) {
-            throw new IllegalStateException("Could not start Dominion container");
-        }
-
-        containerInfo.put(DOMINION, dominionInfo);
+        spawnContainer(ContainerAlias.OPENNMS, opennmsHostConfig);
     }
 
     /**
      * Spawns the Net-SNMP container.
      */
     private void spawnSnmpd() throws DockerException, InterruptedException {
-        final HostConfig snmpdHostConfig = HostConfig.builder()
-                .build();
-
-        final ContainerConfig snmpdConfig = ContainerConfig.builder()
-                .image("snmpd:v1")
-                .hostConfig(snmpdHostConfig)
-                .build();
-
-        final ContainerCreation snmpdCreation = docker.createContainer(snmpdConfig);
-        final String snmpdContainerId = snmpdCreation.id();
-        createdContainerIds.add(snmpdContainerId);
-
-        docker.startContainer(snmpdContainerId);
-
-        final ContainerInfo snmpdInfo = docker.inspectContainer(snmpdContainerId);
-        LOG.info("Snmpd container info: {}", snmpdInfo);
-        if (!snmpdInfo.state().running()) {
-            throw new IllegalStateException("Could not start snmpd container");
-        }
-
-        containerInfo.put(SNMPD, snmpdInfo);
+        spawnContainer(ContainerAlias.SNMPD, HostConfig.builder().build());
     }
 
     /**
      * Spawns the Tomcat container.
      */
     private void spawnTomcat() throws DockerException, InterruptedException {
-        final HostConfig tomcatHostConfig = HostConfig.builder()
-                .build();
-
-        final ContainerConfig tomcatConfig = ContainerConfig.builder()
-                .image("tomcat:v1")
-                .hostConfig(tomcatHostConfig)
-                .build();
-
-        final ContainerCreation tomcatCreation = docker.createContainer(tomcatConfig);
-        final String tomcatContainerId = tomcatCreation.id();
-        createdContainerIds.add(tomcatContainerId);
-
-        docker.startContainer(tomcatContainerId);
-
-        final ContainerInfo tomcatInfo = docker.inspectContainer(tomcatContainerId);
-        LOG.info("Tomcat container info: {}", tomcatInfo);
-        if (!tomcatInfo.state().running()) {
-            throw new IllegalStateException("Could not start Tomcat container");
-        }
-
-        containerInfo.put(TOMCAT, tomcatInfo);
+        spawnContainer(ContainerAlias.TOMCAT, HostConfig.builder().build());
     }
 
     /**
-     * Spawns the Minion container, linked to Dominion, Net-SNMP and Tomcat.
+     * Spawns the Minion container, linked to OpenNMS, Net-SNMP and Tomcat.
      */
     private void spawnMinion() throws DockerException, InterruptedException {
         final List<String> links = Lists.newArrayList();
-        links.add(String.format("%s:dominion", containerInfo.get(DOMINION).name()));
-        links.add(String.format("%s:snmpd", containerInfo.get(SNMPD).name()));
-        links.add(String.format("%s:tomcat", containerInfo.get(TOMCAT).name()));
+        links.add(String.format("%s:opennms", containerInfoByAlias.get(ContainerAlias.OPENNMS).name()));
+        links.add(String.format("%s:snmpd", containerInfoByAlias.get(ContainerAlias.SNMPD).name()));
+        links.add(String.format("%s:tomcat", containerInfoByAlias.get(ContainerAlias.TOMCAT).name()));
 
         final HostConfig minionHostConfig = HostConfig.builder()
                 .publishAllPorts(true)
                 .links(links)
                 .build();
+        spawnContainer(ContainerAlias.MINION, minionHostConfig);
+    }
 
-        final ContainerConfig minionConfig = ContainerConfig.builder()
-                .image("minion:v1")
-                .hostConfig(minionHostConfig)
+    /**
+     * Spawns a container.
+     */
+    private void spawnContainer(ContainerAlias alias, HostConfig hostConfig) throws DockerException, InterruptedException {
+        final ContainerConfig containerConfig = ContainerConfig.builder()
+                .image(IMAGES_BY_ALIAS.get(alias))
+                .hostConfig(hostConfig)
                 .build();
 
-        final ContainerCreation minionCreation = docker.createContainer(minionConfig);
-        final String minionContainerId = minionCreation.id();
-        createdContainerIds.add(minionContainerId);
+        final ContainerCreation containerCreation = docker.createContainer(containerConfig);
+        final String containerId = containerCreation.id();
+        createdContainerIds.add(containerId);
 
-        docker.startContainer(minionContainerId);
+        docker.startContainer(containerId);
 
-        final ContainerInfo minionInfo = docker.inspectContainer(minionContainerId);
-        LOG.info("Minion container info: {}", minionInfo);
-        if (!minionInfo.state().running()) {
-            throw new IllegalStateException("Could not start Minion container");
+        final ContainerInfo containerInfo = docker.inspectContainer(containerId);
+        LOG.info("{} container info: {}", alias, containerId);
+        if (!containerInfo.state().running()) {
+            throw new IllegalStateException("Could not start the " + alias + " container");
         }
 
-        containerInfo.put(MINION, minionInfo);
+        containerInfoByAlias.put(alias, containerInfo);
     }
 
     /**
-     * Blocks until the PostgreSQL server is up and running.
+     * Blocks until the REST and Karaf Shell services are available.
      */
-    private void waitForPostgres() {
-        final InetSocketAddress postgresAddr = getServiceAddress(POSTGRES, 5432);
-        LOG.info("Waiting for PostgreSQL service @ {}.", postgresAddr);
-        await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(DBUtils.canConnectToPostgres(postgresAddr, "postgres", "postgres", "postgres"));
-        LOG.info("PostgreSQL service is online.");
-    }
-
-    /**
-     * Configures the Dominion container:
-     * 1) Waits for both the REST service and Karaf's SSH shell to be accessible.
-     * 2) Installs the Dominion features via the Karaf shell.
-     * 3) Installs the sampler-rrd-storage feature with an MBean call
-     */
-    private void configureDominion() throws Exception {
-        final InetSocketAddress httpAddr = getServiceAddress(DOMINION, 8980);
-        final RESTClient restClient = new RESTClient(httpAddr);
+    private void waitForOpenNMS() throws Exception {
+        final InetSocketAddress httpAddr = getServiceAddress(ContainerAlias.OPENNMS, 8980);
+        final RestClient restClient = new RestClient(httpAddr);
         final Callable<String> getDisplayVersion = new Callable<String>() {
             @Override
             public String call() throws Exception {
@@ -362,111 +305,24 @@ public class NewMinionSystem extends ExternalResourceRule implements MinionSyste
         };
 
         LOG.info("Waiting for REST service @ {}.", httpAddr);
+        // TODO: It's possible that the OpenNMS server doesn't start if there are any
+        // problems in $OPENNMS_HOME/etc. Instead of waiting the whole 5 minutes and timing out
+        // we should also poll the status of the container, so we can fail sooner.
         await().atMost(5, MINUTES).pollInterval(15, SECONDS).until(getDisplayVersion, is(notNullValue()));
-        LOG.info("Dominion's REST service is online.");
+        LOG.info("OpenNMS's REST service is online.");
 
-        final InetSocketAddress sshAddr = getServiceAddress(DOMINION, 8101);
+        final InetSocketAddress sshAddr = getServiceAddress(ContainerAlias.OPENNMS, 8101);
         LOG.info("Waiting for SSH service @ {}.", sshAddr);
-        await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SSHClient.canConnectViaSsh(sshAddr, "admin", "admin"));
-        LOG.info("Dominion's Karaf Shell is online.");
-
-        try (
-            final SSHClient sshClient = new SSHClient(sshAddr, "admin", "admin");
-        ) {
-            PrintStream pipe = sshClient.openShell();
-            pipe.println("source http://localhost:8980/minion/opennms-setup.karaf");
-            pipe.println("config:edit org.opennms.netmgt.sampler.storage.rrd");
-            pipe.println("config:propset rrdStorageDirectory /opt/opennms/share/rrd/snmp");
-            pipe.println("config:propset step 15");
-            pipe.println("config:propset heartBeat 30");
-            pipe.println("config:update");
-            pipe.println("logout");
-            try {
-                await().atMost(2, MINUTES).until(sshClient.isShellClosedCallable());
-            } finally {
-                LOG.info("Karaf output: {}", sshClient.getStdout());
-            }
-        }
-
-        final InetSocketAddress jmxAddr = getServiceAddress(DOMINION, 18980);
-        final InetSocketAddress rmiAddr = getServiceAddress(DOMINION, 1099);
-        KarafMBeanProxyHelper mbeanHelper = new KarafMBeanProxyHelper(jmxAddr, rmiAddr, "admin", "admin");
-        FeaturesServiceMBean featuresService = mbeanHelper.getFeaturesService("opennms");
-
-        // These features should be installed by the setup script
-        assertThat(isFeatureInstalled(featuresService, "sample-receiver-activemq"), is(true));
-        assertThat(isFeatureInstalled(featuresService, "minion-base"), is(true));
-        assertThat(isFeatureInstalled(featuresService, "dominion-controller-statuswriter-dao"), is(true));
-        assertThat(isFeatureInstalled(featuresService, "dominion-controller"), is(true));
-
-        // Used to persist samples to RRDs
-        featuresService.installFeature("sample-storage-rrd");
-        assertThat(isFeatureInstalled(featuresService, "sample-storage-rrd"), is(true));
+        await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "admin", "admin"));
+        LOG.info("OpenNMS's Karaf Shell is online.");
     }
 
     /**
-     * Configures the Minion container by invoking the setup script
-     * hosted on Dominion with the various instance names.
+     * Blocks until the Karaf Shell service is available.
      */
-    private void configureMinion() throws Exception {
-        final Map<String, Integer> instanceNameToPort = Maps.newLinkedHashMap();
-        instanceNameToPort.put("activemq", 8202);
-        instanceNameToPort.put("minion", 8203);
-        instanceNameToPort.put("sampler", 8204);
-
-        final ContainerInfo minionInfo = containerInfo.get(MINION);
-        configureMinionKarafInstance("root", 8101, minionInfo);
-
-        for (Map.Entry<String, Integer> entry : instanceNameToPort.entrySet()) {
-            final String instanceName = entry.getKey();
-            final int servicePort = entry.getValue();
-            configureMinionKarafInstance(instanceName, servicePort, minionInfo);
-        }
-    }
-
-    private void configureMinionKarafInstance(final String instanceName, final int servicePort, final ContainerInfo minionInfo ) throws Exception {
-        final InetSocketAddress sshAddr = getServiceAddress(MINION, servicePort);
-
-        LOG.info("Waiting for SSH service for Karaf instance {} @ {}.", instanceName, sshAddr);
-        await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SSHClient.canConnectViaSsh(sshAddr, "karaf", "karaf"));
-
-        // These scripts can fail from time to time, so we try running them a few times before failing.
-        final int NUM_RETRIES = 2;
-        for (int k = 0; k <= NUM_RETRIES; k++) {
-            LOG.info("Running setup script on Karaf instance {} (retry #{} of {}).", instanceName, k, NUM_RETRIES);
-            final String script = String.format(
-                    "addcommand system (($.context bundle) loadClass java.lang.System)"
-                  + ";DOMINION_HTTP_HOST=system:getenv DOMINION_PORT_8980_TCP_ADDR"
-                  + ";DOMINION_HTTP_PORT=system:getenv DOMINION_PORT_8980_TCP_PORT"
-                  + ";DOMINION_MQ_HOST=system:getenv DOMINION_PORT_61616_TCP_ADDR"
-                  + ";DOMINION_MQ_PORT=system:getenv DOMINION_PORT_61616_TCP_PORT"
-                  + ";DOMINION_HTTP=http://$DOMINION_HTTP_HOST:$DOMINION_HTTP_PORT"
-                  + ";source $DOMINION_HTTP/minion/minion-setup.karaf %s admin admin $DOMINION_HTTP minion1",
-                  instanceName);
-
-            try (
-                    final SSHClient sshClient = new SSHClient(sshAddr, "karaf", "karaf");
-                ) {
-                    PrintStream pipe = sshClient.openShell();
-                    pipe.println(script);
-                    pipe.println("logout");
-                    try {
-                        await().atMost(1, MINUTES).until(sshClient.isShellClosedCallable());
-                    } finally {
-                        LOG.info("Karaf output: {}", sshClient.getStdout());
-                    }
-                }
-            catch (Throwable t) {
-                if (k == NUM_RETRIES) {
-                    // Re-throw the exception after the last retry
-                    throw t;
-                }
-                // Otherwise, try again
-                continue;
-            }
-
-            // No exceptions, we're done
-            break;
-        }
+    private void waitForMinion() throws Exception {
+        final InetSocketAddress sshAddr = getServiceAddress(ContainerAlias.MINION, 8201);
+        LOG.info("Waiting for SSH service for Karaf instance @ {}.", sshAddr);
+        await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "karaf", "karaf"));
     }
 }

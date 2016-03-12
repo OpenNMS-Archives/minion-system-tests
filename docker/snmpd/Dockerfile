@@ -1,12 +1,10 @@
-FROM centos:centos7
-MAINTAINER jesse@opennms.com
+FROM centos:7
+MAINTAINER jesse@opennms.org
 
-RUN \
-    yum update -y && \
-    yum install -y net-snmp && \
-    yum clean all
+RUN yum install -y net-snmp && yum clean all
 
-COPY container-files /
+COPY etc /etc
+COPY scripts/bootstrap.sh /
 
 ENV LOCATION docker
 

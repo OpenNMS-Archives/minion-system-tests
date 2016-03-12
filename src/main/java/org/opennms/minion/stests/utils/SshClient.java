@@ -1,3 +1,30 @@
+/*******************************************************************************
+ * This file is part of OpenNMS(R).
+ *
+ * Copyright (C) 2016 The OpenNMS Group, Inc.
+ * OpenNMS(R) is Copyright (C) 1999-2016 The OpenNMS Group, Inc.
+ *
+ * OpenNMS(R) is a registered trademark of The OpenNMS Group, Inc.
+ *
+ * OpenNMS(R) is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Affero General Public License as published
+ * by the Free Software Foundation, either version 3 of the License,
+ * or (at your option) any later version.
+ *
+ * OpenNMS(R) is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Affero General Public License for more details.
+ *
+ * You should have received a copy of the GNU Affero General Public License
+ * along with OpenNMS(R).  If not, see:
+ *      http://www.gnu.org/licenses/
+ *
+ * For more information contact:
+ *     OpenNMS(R) Licensing <license@opennms.org>
+ *     http://www.opennms.org/
+ *     http://www.opennms.com/
+ *******************************************************************************/
 package org.opennms.minion.stests.utils;
 
 import java.io.ByteArrayOutputStream;
@@ -8,6 +35,7 @@ import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.concurrent.Callable;
 
+import org.opennms.minion.stests.jsch.SLF4JLogger;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -20,9 +48,14 @@ import com.jcraft.jsch.Session;
  *
  * @author jwhite
  */
-public class SSHClient implements AutoCloseable {
+public class SshClient implements AutoCloseable {
 
-    private static final Logger LOG = LoggerFactory.getLogger(SSHClient.class);
+    private static final Logger LOG = LoggerFactory.getLogger(SshClient.class);
+
+    private static final com.jcraft.jsch.Logger jschLogger = new SLF4JLogger();
+    {
+        JSch.setLogger(jschLogger);
+    }
 
     public static final int DEFAULT_TIMEOUT_MS = 5*1000;
 
@@ -37,8 +70,8 @@ public class SSHClient implements AutoCloseable {
     private final String password;
 
     private int timeout = DEFAULT_TIMEOUT_MS;
-    
-    public SSHClient(InetSocketAddress addr, String username, String password) {
+
+    public SshClient(InetSocketAddress addr, String username, String password) {
         this.addr = addr;
         this.username = username;
         this.password = password;
@@ -141,7 +174,7 @@ public class SSHClient implements AutoCloseable {
             public Boolean call() throws Exception {
                 LOG.info("Attempting to SSH to {}@{}:{}", username, addr.getHostString(), addr.getPort());
                 try (
-                    final SSHClient client = new SSHClient(addr, username, password);
+                    final SshClient client = new SshClient(addr, username, password);
                 ) {
                     client.setTimeout(1000);
                     client.openShell();

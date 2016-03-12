@@ -1,13 +1,21 @@
-FROM java:8
-MAINTAINER jesse@opennms.com
+FROM centos:7
+MAINTAINER jesse@opennms.org
 
-RUN wget http://apache.cs.utah.edu/karaf/2.4.0/apache-karaf-2.4.0.tar.gz; \
-    mkdir /opt/karaf; \
-    tar --strip-components=1 -C /opt/karaf -xzf apache-karaf-2.4.0.tar.gz; \
-    rm apache-karaf-2.4.0.tar.gz; \
-    mkdir /deploy; \
-    sed -i 's/^\(felix\.fileinstall\.dir\s*=\s*\).*$/\1\/deploy/' /opt/karaf/etc/org.apache.felix.fileinstall-deploy.cfg
+RUN yum install -y openssh-clients java-1.8.0-openjdk-devel which wget unzip
 
-VOLUME ["/deploy"]
-EXPOSE 1099 8101 44444 8202 8203 8204
-ENTRYPOINT ["/opt/karaf/bin/karaf"]
+ADD /rpms/*.rpm /
+RUN yum localinstall -y /*.rpm && rm -rf /*.rpm
+
+COPY etc     /opt/minion/etc
+COPY scripts /opt/minion/bin
+
+# Ports
+# 1299 - RMI Registry
+# 1514 - Syslog
+# 8201 - Karaf SSH
+# 45444 - RMI Server
+EXPOSE 1299 1514/udp 5150 8201 45444
+
+WORKDIR /opt/minion
+ENV JAVA_HOME /usr/lib/jvm/java-1.8.0-openjdk
+CMD ["/opt/minion/bin/bootstrap.sh"]

@@ -1,4 +1,4 @@
-#!/bin/sh -e
+#!/bin/bash -e
 if [ -z $OPENNMS_BUILD ]; then
   OPENNMS_BUILD="$HOME/git/opennms"
 fi

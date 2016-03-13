@@ -38,6 +38,7 @@ import java.net.InetSocketAddress;
 import java.util.Date;
 
 import org.junit.ClassRule;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.opennms.core.criteria.Criteria;
 import org.opennms.core.criteria.CriteriaBuilder;
@@ -57,6 +58,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author jwhite
  */
+@Ignore
 public class SyslogTest {
     private static final Logger LOG = LoggerFactory.getLogger(SyslogTest.class);
 

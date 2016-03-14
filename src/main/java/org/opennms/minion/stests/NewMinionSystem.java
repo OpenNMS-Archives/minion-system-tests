@@ -323,6 +323,6 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
     private void waitForMinion() throws Exception {
         final InetSocketAddress sshAddr = getServiceAddress(ContainerAlias.MINION, 8201);
         LOG.info("Waiting for SSH service for Karaf instance @ {}.", sshAddr);
-        await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "karaf", "karaf"));
+        await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "admin", "admin"));
     }
 }

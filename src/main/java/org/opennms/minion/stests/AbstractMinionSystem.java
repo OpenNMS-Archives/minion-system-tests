@@ -33,10 +33,13 @@ import java.util.List;
 import org.opennms.minion.stests.NewMinionSystem.ContainerAlias;
 import org.opennms.minion.stests.junit.ExternalResourceRule;
 
+import com.spotify.docker.client.DockerClient;
 import com.spotify.docker.client.messages.ContainerInfo;
 import com.spotify.docker.client.messages.PortBinding;
 
 public abstract class AbstractMinionSystem extends ExternalResourceRule implements MinionSystem {
+
+    public abstract DockerClient getDockerClient();
 
     @Override
     public InetSocketAddress getServiceAddress(ContainerAlias alias, int port) {
@@ -56,7 +59,7 @@ public abstract class AbstractMinionSystem extends ExternalResourceRule implemen
                     portKey, alias));
         }
         final PortBinding binding = bindings.iterator().next();
-        final String host = "0.0.0.0".equals(binding.hostIp()) ? "127.0.0.1" : binding.hostIp();
+        final String host = "0.0.0.0".equals(binding.hostIp()) ? getDockerClient().getHost() : binding.hostIp();
         return new InetSocketAddress(host, Integer.valueOf(binding.hostPort()));
     }
 }

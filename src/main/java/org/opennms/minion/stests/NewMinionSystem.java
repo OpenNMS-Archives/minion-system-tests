@@ -325,4 +325,9 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
         LOG.info("Waiting for SSH service for Karaf instance @ {}.", sshAddr);
         await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "admin", "admin"));
     }
+
+    @Override
+    public DockerClient getDockerClient() {
+        return docker;
+    }
 }

@@ -93,4 +93,9 @@ public class ExistingMinionSystem extends AbstractMinionSystem implements Minion
     public Set<ContainerAlias> getContainerAliases() {
         return containerInfo.keySet();
     }
+
+    @Override
+    public DockerClient getDockerClient() {
+        return docker;
+    }
 }

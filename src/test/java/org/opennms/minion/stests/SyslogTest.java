@@ -58,12 +58,14 @@ import org.slf4j.LoggerFactory;
  *
  * @author jwhite
  */
-@Ignore
 public class SyslogTest {
     private static final Logger LOG = LoggerFactory.getLogger(SyslogTest.class);
 
     @ClassRule
     public static MinionSystem minionSystem = MinionSystem.builder().build();
+    //public static MinionSystem minionSystem = MinionSystem.builder().skipTearDown(true).build();
+    //public static MinionSystem minionSystem = MinionSystem.builder().useExisting(true).build();
+    
 
     @Test
     public void canReceiveSyslogMessages() throws Exception {

@@ -33,13 +33,7 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.net.InetSocketAddress;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -155,6 +149,7 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
             return;
         }
 
+        /* TODO: Gathering the log files can cause the tests to hang indefinitely.
         // Ideally, we would only gather the logs and container output
         // when we fail, but we can't detect this when using @ClassRules
         final ContainerInfo opennmsContainerInfo = containerInfoByAlias.get(ContainerAlias.OPENNMS);
@@ -171,6 +166,7 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
         } else {
             LOG.warn("No OpenNMS container provisioned. Logs won't be copied.");
         }
+        */
 
         LOG.info("Gathering container output...");
         for (String containerId : createdContainerIds) {

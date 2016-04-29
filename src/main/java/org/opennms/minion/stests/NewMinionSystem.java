@@ -152,10 +152,10 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
         /* TODO: Gathering the log files can cause the tests to hang indefinitely.
         // Ideally, we would only gather the logs and container output
         // when we fail, but we can't detect this when using @ClassRules
-        final ContainerInfo opennmsContainerInfo = containerInfoByAlias.get(ContainerAlias.OPENNMS);
+        ContainerInfo opennmsContainerInfo = containerInfoByAlias.get(ContainerAlias.OPENNMS);
         if (opennmsContainerInfo != null) {
             LOG.info("Gathering OpenNMS logs...");
-            final Path destination = Paths.get("target/opennms.logs.tar");
+            Path destination = Paths.get("target/opennms.logs.tar");
             try (
                     final InputStream in = docker.copyContainer(opennmsContainerInfo.id(), "/opt/opennms/logs");
             ) {
@@ -163,11 +163,37 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
             } catch (DockerException|InterruptedException|IOException e) {
                 LOG.warn("Failed to copy the logs directory from the Dominion container.", e);
             }
+
+            destination = Paths.get("target/opennms.karaf.logs.tar");
+            try (
+                 final InputStream in = docker.copyContainer(opennmsContainerInfo.id(), "/opt/opennms/data/log");
+                 ) {
+                Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
+            } catch (DockerException|InterruptedException|IOException e) {
+                LOG.warn("Failed to copy the data/log directory from the Dominion container.", e);
+            }
         } else {
             LOG.warn("No OpenNMS container provisioned. Logs won't be copied.");
         }
-        */
 
+        // Ideally, we would only gather the logs and container output
+        // when we fail, but we can't detect this when using @ClassRules
+        opennmsContainerInfo = containerInfoByAlias.get(ContainerAlias.MINION);
+        if (opennmsContainerInfo != null) {
+            LOG.info("Gathering Minion logs...");
+            final Path destination = Paths.get("target/minion.logs.tar");
+            try (
+                 final InputStream in = docker.copyContainer(opennmsContainerInfo.id(), "/opt/minion/data/log");
+                 ) {
+                Files.copy(in, destination, StandardCopyOption.REPLACE_EXISTING);
+            } catch (DockerException|InterruptedException|IOException e) {
+                LOG.warn("Failed to copy the logs directory from the Minion container.", e);
+            }
+        } else {
+            LOG.warn("No Minion container provisioned. Logs won't be copied.");
+        }
+         */
+        
         LOG.info("Gathering container output...");
         for (String containerId : createdContainerIds) {
             try {

@@ -31,6 +31,8 @@ import java.util.concurrent.Callable;
 
 import org.opennms.core.criteria.Criteria;
 import org.opennms.netmgt.dao.api.OnmsDao;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * DAO utility thingies.
@@ -38,10 +40,15 @@ import org.opennms.netmgt.dao.api.OnmsDao;
  * @author jwhite
  */
 public class DaoUtils {
+
+    private static final Logger LOG = LoggerFactory.getLogger(DaoUtils.class);
+
     public static Callable<Integer> countMatchingCallable(OnmsDao<?,?> dao, Criteria criteria) {
         return new Callable<Integer>() {
               public Integer call() throws Exception {
-                  return dao.countMatching(criteria);
+                  Integer count = dao.countMatching(criteria);
+                  LOG.info("Count: {}", count);
+                  return count;
               }
         };
     }

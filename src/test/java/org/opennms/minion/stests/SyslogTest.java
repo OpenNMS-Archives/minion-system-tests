@@ -29,6 +29,7 @@ package org.opennms.minion.stests;
 
 import static com.jayway.awaitility.Awaitility.await;
 import static java.util.concurrent.TimeUnit.MINUTES;
+import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.greaterThan;
 
 import java.io.PrintStream;
@@ -102,6 +103,6 @@ public class SyslogTest {
                 .ge("eventTime", startOfTest)
                 .toCriteria();
 
-        await().atMost(5, MINUTES).until(DaoUtils.countMatchingCallable(eventDao, criteria), greaterThan(0));
+        await().atMost(1, MINUTES).pollInterval(10, SECONDS).until(DaoUtils.countMatchingCallable(eventDao, criteria), greaterThan(0));
     }
 }

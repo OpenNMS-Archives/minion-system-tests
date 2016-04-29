@@ -1,7 +1,8 @@
 FROM centos:7
 MAINTAINER jesse@opennms.org
 
-RUN yum install -y openssh-clients java-1.8.0-openjdk-devel which wget unzip
+# Keep this line in sync with the minion image so that they can share a common base image
+RUN yum install -y openssh-clients java-1.8.0-openjdk-devel which wget unzip ed
 
 # OpenNMS dependencies
 RUN rpm --import http://yum.opennms.org/OPENNMS-GPG-KEY && \

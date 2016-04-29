@@ -11,7 +11,13 @@ sed -i 's|url=.*template1.*|url="jdbc:postgresql://'"${POSTGRES_PORT_5432_TCP_AD
 sed -i s/sshHost.*/sshHost=0.0.0.0/g "${OPENNMS_HOME}/etc/org.apache.karaf.shell.cfg"
 
 # Expose ActiveMQ
-sed -i s/127.0.0.1:61616/0.0.0.0:61616/g "${OPENNMS_HOME}/etc/opennms-activemq.xml"
+# Search for the <transportConnectors> tag and insert the externally accessible connector after it
+ed "${OPENNMS_HOME}/etc/opennms-activemq.xml" <<EOF
+/<transportConnectors>/a
+<transportConnector name="openwire" uri="tcp://0.0.0.0:61616?useJmx=false&amp;maximumConnections=1000&amp;wireformat.maxFrameSize=104857600"/>
+.
+wq
+EOF
 
 echo "Waiting for Postgres to start..."
 WAIT=0
@@ -19,7 +25,7 @@ while ! $(timeout 1 bash -c 'cat < /dev/null > /dev/tcp/$POSTGRES_PORT_5432_TCP_
   sleep 1
   WAIT=$(($WAIT + 1))
   if [ "$WAIT" -gt 15 ]; then
-    echo "Error: Timeout wating for Postgres to start"
+    echo "Error: Timeout waiting for Postgres to start"
     exit 1
   fi
 done

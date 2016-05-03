@@ -52,7 +52,10 @@ popd
 ----
 
 [NOTE]
-The OPENNMS_BUILD enviornment variable is used by the `copy-rpms.sh` script to find the .rpms.
+The OPENNMS_BUILD environment variable is used by the `copy-rpms.sh` script to find the .rpms.
+
+[NOTE]
+You can also use the OPENNMS_RPM_ROOT environment variable to point to the directory containing RPMs for the `copy-rpms.sh` script.
 
 == Running the tests
 

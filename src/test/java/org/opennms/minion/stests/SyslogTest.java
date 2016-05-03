@@ -78,6 +78,11 @@ public class SyslogTest {
             final SshClient sshClient = new SshClient(sshAddr, "admin", "admin");
         ) {
             PrintStream pipe = sshClient.openShell();
+            // Point the syslog handler at the local ActiveMQ broker
+            pipe.println("config:edit org.opennms.netmgt.syslog.handler.default");
+            pipe.println("config:propset brokerUri tcp://127.0.0.1:61616");
+            pipe.println("config:update");
+            // Install the syslog handler feature
             pipe.println("features:install opennms-syslogd-handler-default");
             pipe.println("logout");
             try {

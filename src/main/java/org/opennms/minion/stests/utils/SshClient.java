@@ -180,7 +180,7 @@ public class SshClient implements AutoCloseable {
                     client.openShell();
                     return true;
                 } catch (Throwable t) {
-                    LOG.debug("SSH connection failed.", t);
+                    LOG.debug("SSH connection failed: " + t.getMessage());
                     return false;
                 }
             }

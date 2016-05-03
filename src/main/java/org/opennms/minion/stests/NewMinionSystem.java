@@ -194,11 +194,19 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
         }
          */
         
+        LOG.info("************************************************************");
         LOG.info("Gathering container output...");
+        LOG.info("************************************************************");
         for (String containerId : createdContainerIds) {
             try {
                 LogStream logStream = docker.logs(containerId, LogsParam.stdout(), LogsParam.stderr());
-                LOG.info("Stdout/stderr for {}: {}", containerId, logStream.readFully());
+                LOG.info("************************************************************");
+                LOG.info("Start of stdout/stderr for {}:", containerId);
+                LOG.info("************************************************************");
+                LOG.info(logStream.readFully());
+                LOG.info("************************************************************");
+                LOG.info("End of stdout/stderr for {}:", containerId);
+                LOG.info("************************************************************");
             } catch (DockerException | InterruptedException e) {
                 LOG.warn("Failed to get stdout/stderr for container {}.", e);
             }
@@ -208,11 +216,15 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
             // Kill and remove all of the containers we created
             for (String containerId : createdContainerIds) {
                 try {
+                    LOG.info("************************************************************");
                     LOG.info("Killing and removing container with id: {}", containerId);
+                    LOG.info("************************************************************");
                     docker.killContainer(containerId);
                     docker.removeContainer(containerId);
                 } catch (Exception e) {
+                    LOG.error("************************************************************");
                     LOG.error("Failed to kill and/or remove container with id: {}", containerId, e);
+                    LOG.error("************************************************************");
                 }
             }
         } else {
@@ -300,7 +312,9 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
         docker.startContainer(containerId);
 
         final ContainerInfo containerInfo = docker.inspectContainer(containerId);
+        LOG.info("************************************************************");
         LOG.info("{} container info: {}", alias, containerId);
+        LOG.info("************************************************************");
         if (!containerInfo.state().running()) {
             throw new IllegalStateException("Could not start the " + alias + " container");
         }
@@ -320,23 +334,31 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
                 try {
                     return restClient.getDisplayVersion();
                 } catch (Throwable t) {
-                    LOG.debug("Version lookup failed.", t);
+                    LOG.debug("Version lookup failed: " + t.getMessage());
                     return null;
                 }
             }
         };
 
+        LOG.info("************************************************************");
         LOG.info("Waiting for REST service @ {}.", httpAddr);
+        LOG.info("************************************************************");
         // TODO: It's possible that the OpenNMS server doesn't start if there are any
         // problems in $OPENNMS_HOME/etc. Instead of waiting the whole 5 minutes and timing out
         // we should also poll the status of the container, so we can fail sooner.
         await().atMost(5, MINUTES).pollInterval(15, SECONDS).until(getDisplayVersion, is(notNullValue()));
+        LOG.info("************************************************************");
         LOG.info("OpenNMS's REST service is online.");
+        LOG.info("************************************************************");
 
         final InetSocketAddress sshAddr = getServiceAddress(ContainerAlias.OPENNMS, 8101);
+        LOG.info("************************************************************");
         LOG.info("Waiting for SSH service @ {}.", sshAddr);
+        LOG.info("************************************************************");
         await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "admin", "admin"));
+        LOG.info("************************************************************");
         LOG.info("OpenNMS's Karaf Shell is online.");
+        LOG.info("************************************************************");
     }
 
     /**
@@ -344,7 +366,9 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
      */
     private void waitForMinion() throws Exception {
         final InetSocketAddress sshAddr = getServiceAddress(ContainerAlias.MINION, 8201);
+        LOG.info("************************************************************");
         LOG.info("Waiting for SSH service for Karaf instance @ {}.", sshAddr);
+        LOG.info("************************************************************");
         await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "admin", "admin"));
     }
 

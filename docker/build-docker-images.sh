@@ -4,10 +4,10 @@
 echo "Pulling postgres image from public registry"
 docker pull postgres:9.5.1
 
-echo "Builing Minion image"
+echo "Building Minion image"
 docker build -t stests/minion ./minion
 
-echo "Builing OpenNMS image"
+echo "Building OpenNMS image"
 docker build -t stests/opennms ./opennms
 
 echo "Building snmpd image"

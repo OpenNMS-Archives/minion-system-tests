@@ -12,6 +12,7 @@ sed -i s/sshHost.*/sshHost=0.0.0.0/g "${OPENNMS_HOME}/etc/org.apache.karaf.shell
 
 # Expose ActiveMQ
 # Search for the <transportConnectors> tag and insert the externally accessible connector after it
+echo "Editing opennms-activemq.xml..."
 ed "${OPENNMS_HOME}/etc/opennms-activemq.xml" <<EOF
 /<transportConnectors>/a
 <transportConnector name="openwire" uri="tcp://0.0.0.0:61616?useJmx=false&amp;maximumConnections=1000&amp;wireformat.maxFrameSize=104857600"/>

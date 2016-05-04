@@ -92,6 +92,7 @@ public class SyslogTest {
             }
         }
 
+        // Send a syslog packet to the Minion syslog listener
         final InetSocketAddress syslogAddr = minionSystem.getServiceAddress(ContainerAlias.MINION, 1514, "udp");
         byte[] message = "<190>Mar 11 08:35:17 aaa_host 30128311: Mar 11 08:35:16.844 CST: %SEC-6-IPACCESSLOGP: list in110 denied tcp 192.168.10.100(63923) -> 192.168.11.128(1521), 1 packet\n".getBytes();
         DatagramPacket packet = new DatagramPacket(message, message.length, syslogAddr.getAddress(), syslogAddr.getPort());
@@ -99,15 +100,17 @@ public class SyslogTest {
         dsocket.send(packet);
         dsocket.close();
 
+        // Connect to the postgresql container
         InetSocketAddress pgsql = minionSystem.getServiceAddress(ContainerAlias.POSTGRES, 5432);
         HibernateDaoFactory daoFactory = new HibernateDaoFactory(pgsql);
         EventDao eventDao = daoFactory.getDao(EventDaoHibernate.class);
 
+        // Parsing the message correctly relies on the customized syslogd-configuration.xml that is part of the OpenNMS image
         Criteria criteria = new CriteriaBuilder(OnmsEvent.class)
                 .eq("eventUei", "uei.opennms.org/vendor/cisco/syslog/SEC-6-IPACCESSLOGP/aclDeniedIPTraffic")
                 .ge("eventTime", startOfTest)
                 .toCriteria();
 
-        await().atMost(1, MINUTES).pollInterval(10, SECONDS).until(DaoUtils.countMatchingCallable(eventDao, criteria), greaterThan(0));
+        await().atMost(1, MINUTES).pollInterval(5, SECONDS).until(DaoUtils.countMatchingCallable(eventDao, criteria), greaterThan(0));
     }
 }

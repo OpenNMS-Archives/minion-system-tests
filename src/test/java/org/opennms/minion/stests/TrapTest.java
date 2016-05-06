@@ -31,18 +31,20 @@ import static com.jayway.awaitility.Awaitility.await;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.Assert.assertEquals;
 
 import java.io.PrintStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Date;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.opennms.core.criteria.Criteria;
 import org.opennms.core.criteria.CriteriaBuilder;
+import org.opennms.core.utils.InetAddressUtils;
 import org.opennms.minion.stests.NewMinionSystem.ContainerAlias;
 import org.opennms.minion.stests.utils.DaoUtils;
 import org.opennms.minion.stests.utils.HibernateDaoFactory;
@@ -50,26 +52,59 @@ import org.opennms.minion.stests.utils.SshClient;
 import org.opennms.netmgt.dao.api.EventDao;
 import org.opennms.netmgt.dao.hibernate.EventDaoHibernate;
 import org.opennms.netmgt.model.OnmsEvent;
+import org.opennms.netmgt.snmp.SnmpObjId;
+import org.opennms.netmgt.snmp.SnmpTrapBuilder;
+import org.opennms.netmgt.snmp.SnmpUtils;
+import org.opennms.netmgt.snmp.SnmpValue;
+import org.opennms.netmgt.snmp.TrapIdentity;
+import org.opennms.netmgt.snmp.TrapNotification;
+import org.opennms.netmgt.snmp.TrapProcessor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Verifies that syslog messages sent to the Minion generate
+ * Verifies that SNMP traps sent to the Minion generate
  * events in OpenNMS.
  *
- * @author jwhite
+ * @author seth
  */
-public class SyslogTest {
+public class TrapTest {
+
     private static final Logger LOG = LoggerFactory.getLogger(SyslogTest.class);
 
     @ClassRule
-    public static MinionSystem minionSystem = MinionSystem.builder().build();
-    //public static MinionSystem minionSystem = MinionSystem.builder().skipTearDown(true).build();
+    //public static MinionSystem minionSystem = MinionSystem.builder().build();
+    public static MinionSystem minionSystem = MinionSystem.builder().skipTearDown(true).build();
     //public static MinionSystem minionSystem = MinionSystem.builder().useExisting(true).build();
-    
+
+    /*
+    private static class TrapNotificationLatch implements TrapNotificationHandler {
+        private final CountDownLatch m_latch;
+        private TrapNotification m_last = null;
+
+        public TrapNotificationLatch(int count) {
+            m_latch = new CountDownLatch(count);
+        }
+
+        @Override
+        public void handleTrapNotification(TrapNotification message) {
+            LOG.info("Got a trap, decrementing latch");
+            m_latch.countDown();
+            m_last = message;
+        }
+
+        public CountDownLatch getLatch() {
+            return m_latch;
+        }
+
+        public TrapNotification getLast() {
+            return m_last;
+        }
+    }
+    */
 
     @Test
-    public void canReceiveSyslogMessages() throws Exception {
+    public void canReceiveTraps() throws Exception {
         Date startOfTest = new Date();
 
         // Install the handler on the OpenNMS system (this should probably be installed by default)
@@ -98,13 +133,72 @@ public class SyslogTest {
             }
         }
 
-        // Send a syslog packet to the Minion syslog listener
-        final InetSocketAddress syslogAddr = minionSystem.getServiceAddress(ContainerAlias.MINION, 1514, "udp");
-        byte[] message = "<190>Mar 11 08:35:17 aaa_host 30128311: Mar 11 08:35:16.844 CST: %SEC-6-IPACCESSLOGP: list in110 denied tcp 192.168.10.100(63923) -> 192.168.11.128(1521), 1 packet\n".getBytes();
-        DatagramPacket packet = new DatagramPacket(message, message.length, syslogAddr.getAddress(), syslogAddr.getPort());
-        DatagramSocket dsocket = new DatagramSocket();
-        dsocket.send(packet);
-        dsocket.close();
+        // Send a trap to the Minion listener
+        final InetSocketAddress trapAddr = minionSystem.getServiceAddress(ContainerAlias.MINION, 162, "udp");
+
+        //final TrapNotificationLatch m_handler = new TrapNotificationLatch(3);
+
+        for (int i = 0; i < 3; i++) {
+            LOG.info("Sending trap");
+            try {
+                SnmpTrapBuilder pdu = SnmpUtils.getV2TrapBuilder();
+                pdu.addVarBind(SnmpObjId.get(".1.3.6.1.2.1.1.3.0"), SnmpUtils.getValueFactory().getTimeTicks(0));
+                pdu.addVarBind(SnmpObjId.get(".1.3.6.1.6.3.1.1.4.1.0"), SnmpUtils.getValueFactory().getObjectId(SnmpObjId.get(".1.3.6.1.4.1.5813.1")));
+                pdu.addVarBind(SnmpObjId.get(".1.3.6.1.4.1.5813.20.1"), SnmpUtils.getValueFactory().getOctetString("Hello world".getBytes("UTF-8")));
+                pdu.send(InetAddressUtils.str(InetAddressUtils.ONE_TWENTY_SEVEN), 10514, "public");
+            } catch (Throwable e) {
+                LOG.error(e.getMessage(), e);
+            }
+            LOG.info("Trap has been sent");
+        }
+        /*
+        m_handler.getLatch().await(30, TimeUnit.SECONDS);
+        
+        TrapNotification notification = m_handler.getLast();
+        notification.setTrapProcessor(new TrapProcessor() {
+
+            @Override
+            public void setCommunity(String community) {
+                LOG.info("Comparing community");
+                assertEquals("public", community);
+            }
+
+            @Override
+            public void setTimeStamp(long timeStamp) {
+                // TODO: Assert something?
+            }
+
+            @Override
+            public void setVersion(String version) {
+                LOG.info("Comparing version");
+                assertEquals("v2", version);
+            }
+
+            @Override
+            public void setAgentAddress(InetAddress agentAddress) {
+                LOG.info("Comparing agent address");
+                assertEquals(InetAddressUtils.ONE_TWENTY_SEVEN, agentAddress);
+            }
+
+            @Override
+            public void processVarBind(SnmpObjId name, SnmpValue value) {
+            }
+
+            @Override
+            public void setTrapAddress(InetAddress trapAddress) {
+                LOG.info("Comparing trap address");
+                assertEquals(InetAddressUtils.ONE_TWENTY_SEVEN, trapAddress);
+            }
+
+            @Override
+            public void setTrapIdentity(TrapIdentity trapIdentity) {
+                LOG.info("Comparing trap identity");
+                assertEquals(new TrapIdentity(SnmpObjId.get(".1.3.6.1.4.1.5813"), 6, 1).toString(), trapIdentity.toString());
+            }
+        });
+
+        notification.getTrapProcessor();
+        */
 
         // Connect to the postgresql container
         InetSocketAddress pgsql = minionSystem.getServiceAddress(ContainerAlias.POSTGRES, 5432);

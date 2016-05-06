@@ -8,7 +8,7 @@
   <description>Full stack testing of Minion features.</description>
 
   <properties>
-    <opennmsVersion>18.0.0-SNAPSHOT</opennmsVersion>
+    <opennmsVersion>19.0.0-SNAPSHOT</opennmsVersion>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
   </properties>
@@ -124,6 +124,11 @@
     <dependency>
         <groupId>org.opennms</groupId>
         <artifactId>opennms-dao</artifactId>
+        <version>${opennmsVersion}</version>
+    </dependency>
+    <dependency>
+        <groupId>org.opennms.features.events</groupId>
+        <artifactId>org.opennms.features.events.traps</artifactId>
         <version>${opennmsVersion}</version>
     </dependency>
   </dependencies>

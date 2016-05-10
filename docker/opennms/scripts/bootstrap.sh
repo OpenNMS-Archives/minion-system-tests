@@ -20,6 +20,14 @@ ed "${OPENNMS_HOME}/etc/opennms-activemq.xml" <<EOF
 wq
 EOF
 
+#echo "Editing custom.properties..."
+#ed "${OPENNMS_HOME}/etc/custom.properties" <<EOF
+#/org.opennms.netmgt.snmp;/a
+#org.snmp4j,\\
+#.
+#wq
+#EOF
+
 echo "Waiting for Postgres to start..."
 WAIT=0
 while ! $(timeout 1 bash -c 'cat < /dev/null > /dev/tcp/$POSTGRES_PORT_5432_TCP_ADDR/$POSTGRES_PORT_5432_TCP_PORT'); do

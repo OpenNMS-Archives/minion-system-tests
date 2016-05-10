@@ -39,7 +39,6 @@ import java.net.InetSocketAddress;
 import java.util.Date;
 
 import org.junit.ClassRule;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.opennms.core.criteria.Criteria;
 import org.opennms.core.criteria.CriteriaBuilder;
@@ -82,19 +81,18 @@ public class SyslogTest {
             pipe.println("config:edit org.opennms.netmgt.syslog.handler.default");
             pipe.println("config:propset brokerUri tcp://127.0.0.1:61616");
             pipe.println("config:update");
-            // Install the syslog handler feature
-            pipe.println("features:install opennms-syslogd-handler-default");
             // Point the trap handler at the local ActiveMQ broker
             pipe.println("config:edit org.opennms.netmgt.trapd.handler.default");
             pipe.println("config:propset brokerUri tcp://127.0.0.1:61616");
             pipe.println("config:update");
-            // Install the trap handler feature
-            pipe.println("features:install opennms-trapd-handler-default");
+            // Install the syslog and trap handler features
+            pipe.println("features:install opennms-syslogd-handler-default opennms-trapd-handler-default");
+            pipe.println("features:list -i");
             pipe.println("logout");
             try {
                 await().atMost(2, MINUTES).until(sshClient.isShellClosedCallable());
             } finally {
-                LOG.info("Karaf output: {}", sshClient.getStdout());
+                LOG.info("Karaf output:\n{}", sshClient.getStdout());
             }
         }
 

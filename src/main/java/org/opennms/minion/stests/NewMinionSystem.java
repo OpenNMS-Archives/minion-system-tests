@@ -33,11 +33,14 @@ import static java.util.concurrent.TimeUnit.SECONDS;
 import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.notNullValue;
 
+import java.io.PrintStream;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
+import jersey.repackaged.com.google.common.collect.Lists;
 
 import org.opennms.minion.stests.utils.RestClient;
 import org.opennms.minion.stests.utils.SshClient;
@@ -56,8 +59,6 @@ import com.spotify.docker.client.messages.ContainerConfig;
 import com.spotify.docker.client.messages.ContainerCreation;
 import com.spotify.docker.client.messages.ContainerInfo;
 import com.spotify.docker.client.messages.HostConfig;
-
-import jersey.repackaged.com.google.common.collect.Lists;
 
 /**
  * Spawns and configures a collection of Docker containers running the Minion System.
@@ -356,6 +357,7 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
         LOG.info("Waiting for SSH service @ {}.", sshAddr);
         LOG.info("************************************************************");
         await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "admin", "admin"));
+        listFeatures(sshAddr, false);
         LOG.info("************************************************************");
         LOG.info("OpenNMS's Karaf Shell is online.");
         LOG.info("************************************************************");
@@ -370,6 +372,27 @@ public class NewMinionSystem extends AbstractMinionSystem implements MinionSyste
         LOG.info("Waiting for SSH service for Karaf instance @ {}.", sshAddr);
         LOG.info("************************************************************");
         await().atMost(2, MINUTES).pollInterval(5, SECONDS).until(SshClient.canConnectViaSsh(sshAddr, "admin", "admin"));
+        listFeatures(sshAddr, true);
+    }
+
+    private static void listFeatures(InetSocketAddress sshAddr, boolean karaf4) throws Exception {
+        try (
+            final SshClient sshClient = new SshClient(sshAddr, "admin", "admin");
+        ) {
+            PrintStream pipe = sshClient.openShell();
+            if (karaf4) {
+                pipe.println("feature:list -i");
+            } else {
+                pipe.println("features:list -i");
+            }
+            pipe.println("list");
+            pipe.println("logout");
+            try {
+                await().atMost(2, MINUTES).until(sshClient.isShellClosedCallable());
+            } finally {
+                LOG.info("Features installed:\n{}", sshClient.getStdout());
+            }
+        }
     }
 
     @Override

@@ -30,11 +30,9 @@ package org.opennms.minion.stests;
 import static com.jayway.awaitility.Awaitility.await;
 import static java.util.concurrent.TimeUnit.MINUTES;
 import static java.util.concurrent.TimeUnit.SECONDS;
-import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.equalTo;
 
 import java.io.PrintStream;
-import java.net.DatagramPacket;
-import java.net.DatagramSocket;
 import java.net.InetSocketAddress;
 import java.util.Date;
 
@@ -42,6 +40,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 import org.opennms.core.criteria.Criteria;
 import org.opennms.core.criteria.CriteriaBuilder;
+import org.opennms.core.utils.InetAddressUtils;
 import org.opennms.minion.stests.NewMinionSystem.ContainerAlias;
 import org.opennms.minion.stests.utils.DaoUtils;
 import org.opennms.minion.stests.utils.HibernateDaoFactory;
@@ -49,26 +48,29 @@ import org.opennms.minion.stests.utils.SshClient;
 import org.opennms.netmgt.dao.api.EventDao;
 import org.opennms.netmgt.dao.hibernate.EventDaoHibernate;
 import org.opennms.netmgt.model.OnmsEvent;
+import org.opennms.netmgt.snmp.SnmpObjId;
+import org.opennms.netmgt.snmp.SnmpTrapBuilder;
+import org.opennms.netmgt.snmp.SnmpUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Verifies that syslog messages sent to the Minion generate
+ * Verifies that SNMP traps sent to the Minion generate
  * events in OpenNMS.
  *
- * @author jwhite
+ * @author seth
  */
-public class SyslogTest {
-    private static final Logger LOG = LoggerFactory.getLogger(SyslogTest.class);
+public class TrapTest {
+
+    private static final Logger LOG = LoggerFactory.getLogger(TrapTest.class);
 
     @ClassRule
     public static MinionSystem minionSystem = MinionSystem.builder().build();
     //public static MinionSystem minionSystem = MinionSystem.builder().skipTearDown(true).build();
     //public static MinionSystem minionSystem = MinionSystem.builder().useExisting(true).build();
-    
 
     @Test
-    public void canReceiveSyslogMessages() throws Exception {
+    public void canReceiveTraps() throws Exception {
         Date startOfTest = new Date();
 
         // Install the handler on the OpenNMS system (this should probably be installed by default)
@@ -87,7 +89,6 @@ public class SyslogTest {
             pipe.println("config:update");
             // Install the syslog and trap handler features
             pipe.println("features:install opennms-syslogd-handler-default opennms-trapd-handler-default");
-            pipe.println("features:list -i");
             pipe.println("logout");
             try {
                 await().atMost(2, MINUTES).until(sshClient.isShellClosedCallable());
@@ -96,13 +97,23 @@ public class SyslogTest {
             }
         }
 
-        // Send a syslog packet to the Minion syslog listener
-        final InetSocketAddress syslogAddr = minionSystem.getServiceAddress(ContainerAlias.MINION, 1514, "udp");
-        byte[] message = "<190>Mar 11 08:35:17 aaa_host 30128311: Mar 11 08:35:16.844 CST: %SEC-6-IPACCESSLOGP: list in110 denied tcp 192.168.10.100(63923) -> 192.168.11.128(1521), 1 packet\n".getBytes();
-        DatagramPacket packet = new DatagramPacket(message, message.length, syslogAddr.getAddress(), syslogAddr.getPort());
-        DatagramSocket dsocket = new DatagramSocket();
-        dsocket.send(packet);
-        dsocket.close();
+        // Send a trap to the Minion listener
+        final InetSocketAddress trapAddr = minionSystem.getServiceAddress(ContainerAlias.MINION, 162, "udp");
+
+        for (int i = 0; i < 3; i++) {
+            LOG.info("Sending trap");
+            try {
+                SnmpTrapBuilder pdu = SnmpUtils.getV2TrapBuilder();
+                pdu.addVarBind(SnmpObjId.get(".1.3.6.1.2.1.1.3.0"), SnmpUtils.getValueFactory().getTimeTicks(0));
+                // warmStart
+                pdu.addVarBind(SnmpObjId.get(".1.3.6.1.6.3.1.1.4.1.0"), SnmpUtils.getValueFactory().getObjectId(SnmpObjId.get(".1.3.6.1.6.3.1.1.5.2")));
+                pdu.addVarBind(SnmpObjId.get(".1.3.6.1.6.3.1.1.4.3.0"), SnmpUtils.getValueFactory().getObjectId(SnmpObjId.get(".1.3.6.1.4.1.5813")));
+                pdu.send(InetAddressUtils.str(trapAddr.getAddress()), trapAddr.getPort(), "public");
+            } catch (Throwable e) {
+                LOG.error(e.getMessage(), e);
+            }
+            LOG.info("Trap has been sent");
+        }
 
         // Connect to the postgresql container
         InetSocketAddress pgsql = minionSystem.getServiceAddress(ContainerAlias.POSTGRES, 5432);
@@ -111,10 +122,10 @@ public class SyslogTest {
 
         // Parsing the message correctly relies on the customized syslogd-configuration.xml that is part of the OpenNMS image
         Criteria criteria = new CriteriaBuilder(OnmsEvent.class)
-                .eq("eventUei", "uei.opennms.org/vendor/cisco/syslog/SEC-6-IPACCESSLOGP/aclDeniedIPTraffic")
+                .eq("eventUei", "uei.opennms.org/generic/traps/SNMP_Warm_Start")
                 .ge("eventTime", startOfTest)
                 .toCriteria();
 
-        await().atMost(1, MINUTES).pollInterval(5, SECONDS).until(DaoUtils.countMatchingCallable(eventDao, criteria), greaterThan(0));
+        await().atMost(1, MINUTES).pollInterval(5, SECONDS).until(DaoUtils.countMatchingCallable(eventDao, criteria), equalTo(3));
     }
 }

@@ -50,7 +50,7 @@ public class MinionHeartBeatTest {
     public static MinionSystem minionSystem = MinionSystem.builder().build();
 
     @Test
-    public void minionAcknowledgeTest() {
+    public void minionHeartBeatTestForLastUpdated() {
 
         Date startOfTest = new Date();
         InetSocketAddress pgsql = minionSystem.getServiceAddress(ContainerAlias.POSTGRES,
@@ -58,14 +58,11 @@ public class MinionHeartBeatTest {
         HibernateDaoFactory daoFactory = new HibernateDaoFactory(pgsql);
         MinionDao minionDao = daoFactory.getDao(MinionDaoHibernate.class);
 
-        Criteria criteria = new CriteriaBuilder(OnmsMinion.class).ge("lastCheckedIn",
+        Criteria criteria = new CriteriaBuilder(OnmsMinion.class).ge("lastUpdated",
                                                                      startOfTest).toCriteria();
 
-        await().atMost(1,
-                       MINUTES).pollInterval(5,
-                                             SECONDS).until(DaoUtils.countMatchingCallable(minionDao,
-                                                                                           criteria),
-                                                            greaterThan(0));
+        await().atMost(1, MINUTES).pollInterval(5, SECONDS).until(DaoUtils.countMatchingCallable(minionDao,
+                criteria), greaterThan(0));
 
     }
 }

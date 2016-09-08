@@ -12,7 +12,7 @@ RUN rpm --import http://yum.opennms.org/OPENNMS-GPG-KEY && \
 
 # OpenNMS & Hawtio
 ADD /rpms/*.rpm /
-RUN yum localinstall -y /*.rpm && rm -rf /*.rpm && \
+RUN rpm --ignoreos -ivh --force /*.rpm && rm -rf /*.rpm && \
     wget -qO /opt/opennms/jetty-webapps/hawtio.war https://oss.sonatype.org/content/repositories/public/io/hawt/hawtio-default/1.4.63/hawtio-default-1.4.63.war && \
     unzip /opt/opennms/jetty-webapps/hawtio.war -d /opt/opennms/jetty-webapps/hawtio && rm -f /opt/opennms/jetty-webapps/hawtio.war
 

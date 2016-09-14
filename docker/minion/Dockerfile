@@ -5,7 +5,7 @@ MAINTAINER jesse@opennms.org
 RUN yum install -y openssh-clients java-1.8.0-openjdk-devel which wget unzip ed
 
 ADD /rpms/*.rpm /
-RUN yum localinstall -y /*.rpm && rm -rf /*.rpm
+RUN rpm --ignoreos -ivh --force /*.rpm && rm -rf /*.rpm
 
 COPY etc     /opt/minion/etc
 COPY scripts /opt/minion/bin
